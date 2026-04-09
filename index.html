@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KletterMath — Lehrkraft-Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg1: #1a1a2e; --bg2: #16213e; --bg3: #0f3460; --bg4: #1e2a4a;
+  --rope: #e8a030; --accent: #ff6b35; --gold: #ffd166;
+  --text1: #f0e6d3; --text2: #a89880; --ok: #6bcb77; --err: #ff5e5b;
+  --card: rgba(255,255,255,.05); --border: rgba(139,115,85,.2);
+  --font: 'Nunito', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0 }
+body { background: var(--bg1); color: var(--text1); font-family: var(--font); min-height: 100vh; display: flex; flex-direction: column }
+
+/* ── Top Bar ── */
+.topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px }
+.topbar-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; background: linear-gradient(135deg, var(--rope), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px }
+.topbar-sub { color: var(--text2); font-size: .85rem }
+.topbar-spacer { flex: 1 }
+.topbar-setup { font-size: .75rem; color: var(--text2); cursor: pointer; text-decoration: underline }
+
+/* ── Layout ── */
+.layout { display: flex; flex: 1; overflow: hidden }
+.sidebar { width: 240px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0 }
+.main { flex: 1; overflow-y: auto; padding: 24px }
+
+/* ── Sidebar ── */
+.sidebar-section { padding: 16px; border-bottom: 1px solid var(--border) }
+.sidebar-label { font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 10px }
+.class-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; transition: background .15s }
+.class-item:hover { background: var(--card) }
+.class-item.active { background: rgba(232,160,48,.15); color: var(--rope) }
+.class-item .badge { font-size: .7rem; background: var(--bg4); padding: 2px 7px; border-radius: 99px; color: var(--text2) }
+
+.new-class-form { display: flex; gap: 6px; margin-top: 10px }
+.new-class-form input { flex: 1; background: var(--bg4); border: 1px solid var(--border); color: var(--text1); padding: 6px 10px; border-radius: 6px; font-family: var(--font); font-size: .85rem }
+.new-class-form input:focus { outline: none; border-color: var(--rope) }
+.btn { background: var(--rope); color: #1a1a2e; border: none; border-radius: 8px; padding: 8px 14px; font-family: var(--font); font-weight: 700; cursor: pointer; font-size: .85rem; transition: opacity .15s }
+.btn:hover { opacity: .85 }
+.btn.sm { padding: 5px 10px; font-size: .78rem }
+.btn.ghost { background: var(--bg4); color: var(--text1) }
+.btn.danger { background: var(--err) }
+
+/* ── Main ── */
+.page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px }
+.page-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 2px }
+.page-subtitle { color: var(--text2); font-size: .85rem; margin-top: 2px }
+.stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; min-width: 120px }
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--gold) }
+.stat-lbl { font-size: .72rem; color: var(--text2); text-transform: uppercase; letter-spacing: .5px }
+
+/* ── Table ── */
+.table-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap }
+.table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden }
+table { width: 100%; border-collapse: collapse }
+th { background: var(--bg4); padding: 10px 14px; text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); font-weight: 700 }
+td { padding: 11px 14px; border-top: 1px solid var(--border); font-size: .88rem; vertical-align: middle }
+tr:hover td { background: rgba(255,255,255,.02) }
+.code-cell { font-family: 'JetBrains Mono', monospace; font-size: .9rem; letter-spacing: 2px; color: var(--gold) }
+.progress-bar-wrap { display: flex; align-items: center; gap: 8px }
+.progress-bar { width: 80px; height: 5px; background: var(--bg4); border-radius: 99px; overflow: hidden }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--rope), var(--accent)); border-radius: 99px }
+.mastery-gold { color: var(--gold) }
+.never { color: var(--text2); font-style: italic }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px }
+.dot-active  { background: var(--ok) }
+.dot-idle    { background: var(--rope) }
+.dot-never   { background: var(--bg4) }
+
+/* ── Code Generator ── */
+.codegen-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center }
+.codegen-modal.open { display: flex }
+.codegen-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw }
+.codegen-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 16px }
+.codegen-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 20px }
+.codegen-controls input[type=number] { width: 80px; background: var(--bg4); border: 1px solid var(--border); color: var(--text1); padding: 8px 10px; border-radius: 6px; font-family: var(--font); font-size: .9rem; text-align: center }
+.code-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; max-height: 240px; overflow-y: auto; margin-bottom: 16px }
+.code-chip { font-family: 'JetBrains Mono', monospace; font-size: .9rem; letter-spacing: 2px; background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; padding: 8px; text-align: center; color: var(--gold) }
+.codegen-actions { display: flex; gap: 10px }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--text2) }
+.empty-icon { font-size: 3rem; margin-bottom: 12px }
+.empty-text { font-size: .95rem }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: .88rem; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; z-index: 200 }
+.toast.show { opacity: 1; transform: translateY(0) }
+
+/* ── Setup info ── */
+.setup-panel { background: var(--bg4); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 600px; margin-bottom: 24px; display: none }
+.setup-panel.show { display: block }
+.setup-panel h3 { margin-bottom: 12px; color: var(--rope) }
+.setup-panel pre { background: var(--bg1); padding: 10px 14px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: .8rem; overflow-x: auto; margin: 8px 0 }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">KletterMath</div>
+  <div class="topbar-sub">Lehrkraft-Dashboard</div>
+  <div class="topbar-spacer"></div>
+  <span class="topbar-setup" id="btn-toggle-setup">⚙ Setup-Hilfe</span>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Klassen</div>
+      <div id="class-list"></div>
+      <div class="new-class-form">
+        <input type="text" id="input-class-name" placeholder="z.B. Q1A" maxlength="30">
+        <button class="btn sm" id="btn-add-class">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="main">
+
+    <!-- Setup Panel -->
+    <div class="setup-panel" id="setup-panel">
+      <h3>Einmalige Einrichtung</h3>
+      <p style="color:var(--text2);font-size:.85rem;margin-bottom:10px">Besuche einmalig diese URL, um die Datenbanktabellen anzulegen:</p>
+      <pre id="setup-url"></pre>
+      <p style="color:var(--text2);font-size:.85rem;margin-top:10px">GitHub Secrets für das Dashboard-Repo setzen:</p>
+      <pre>KM_DB_HOST   → localhost (oder Server-Name)
+KM_DB_NAME   → dein MySQL-Datenbankname
+KM_DB_USER   → MySQL-Benutzername
+KM_DB_PASS   → MySQL-Passwort</pre>
+    </div>
+
+    <div id="content">
+      <div class="empty">
+        <div class="empty-icon">🧗</div>
+        <div class="empty-text">Wähle links eine Klasse aus oder lege eine neue an.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Code Generator Modal -->
+<div class="codegen-modal" id="codegen-modal">
+  <div class="codegen-box">
+    <div class="codegen-title">Codes generieren</div>
+    <div class="codegen-controls">
+      <label style="font-size:.85rem;color:var(--text2)">Anzahl:</label>
+      <input type="number" id="codegen-count" value="10" min="1" max="50">
+      <button class="btn" id="btn-gen-codes">Generieren</button>
+    </div>
+    <div class="code-grid" id="code-grid"></div>
+    <div class="codegen-actions">
+      <button class="btn" id="btn-copy-codes">📋 Alle kopieren</button>
+      <button class="btn ghost" id="btn-close-modal">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = './api';
+const TOTAL_MISSIONS = 12;
+
+let classes = [];
+let activeClass = null;
+let lastCodes = [];
+
+// ── Init ──
+document.getElementById('btn-toggle-setup').addEventListener('click', () => {
+  const p = document.getElementById('setup-panel');
+  document.getElementById('setup-url').textContent = window.location.origin + window.location.pathname + 'api/setup.php';
+  p.classList.toggle('show');
+});
+
+document.getElementById('btn-add-class').addEventListener('click', addNewClass);
+document.getElementById('input-class-name').addEventListener('keydown', e => { if (e.key === 'Enter') addNewClass() });
+document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('codegen-modal').classList.remove('open'));
+document.getElementById('btn-copy-codes').addEventListener('click', copyAllCodes);
+document.getElementById('btn-gen-codes').addEventListener('click', generateCodes);
+
+loadClasses();
+
+// ── Classes ──
+async function loadClasses() {
+  try {
+    const res = await fetch(`${API}/classes.php`);
+    classes = await res.json();
+    renderClassList();
+    if (classes.length > 0 && !activeClass) selectClass(classes[0]);
+  } catch (e) {
+    showToast('Fehler beim Laden der Klassen. API erreichbar?', true);
+  }
+}
+
+function renderClassList() {
+  const el = document.getElementById('class-list');
+  if (!classes.length) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:.8rem;padding:4px 0">Noch keine Klassen</div>';
+    return;
+  }
+  el.innerHTML = classes.map(c => `
+    <div class="class-item ${activeClass?.id === c.id ? 'active' : ''}" data-id="${c.id}">
+      <span>${c.name}</span>
+      <span class="badge">${c.total_codes || 0}</span>
+    </div>
+  `).join('');
+  el.querySelectorAll('.class-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const cls = classes.find(c => c.id === parseInt(item.dataset.id));
+      if (cls) selectClass(cls);
+    });
+  });
+}
+
+async function addNewClass() {
+  const input = document.getElementById('input-class-name');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch(`${API}/classes.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); return; }
+    input.value = '';
+    await loadClasses();
+    const newClass = classes.find(c => c.id === data.id);
+    if (newClass) selectClass(newClass);
+    showToast(`Klasse "${name}" angelegt`);
+  } catch { showToast('Fehler beim Anlegen', true) }
+}
+
+// ── Class View ──
+async function selectClass(cls) {
+  activeClass = cls;
+  renderClassList();
+  renderLoading();
+  try {
+    const res = await fetch(`${API}/codes.php?class_id=${cls.id}`);
+    const data = await res.json();
+    renderClassView(cls, data);
+  } catch { showToast('Fehler beim Laden', true) }
+}
+
+function renderLoading() {
+  document.getElementById('content').innerHTML = '<div class="empty"><div style="color:var(--text2)">Lade...</div></div>';
+}
+
+function renderClassView(cls, students) {
+  const active   = students.filter(s => s.last_sync).length;
+  const totalXP  = students.reduce((a, s) => a + (parseInt(s.xp) || 0), 0);
+  const avgMiss  = students.length
+    ? (students.reduce((a, s) => a + (JSON.parse(s.missions_done || '[]').length), 0) / students.length).toFixed(1)
+    : '—';
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">${cls.name}</div>
+        <div class="page-subtitle">Zuletzt aktualisiert: ${new Date().toLocaleTimeString('de-DE')}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn sm" id="btn-open-codegen">+ Codes generieren</button>
+        <button class="btn sm ghost" id="btn-refresh">↺ Aktualisieren</button>
+        <button class="btn sm ghost" id="btn-export-csv">⬇ CSV</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val">${students.length}</div><div class="stat-lbl">Codes vergeben</div></div>
+      <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Aktive Schüler</div></div>
+      <div class="stat-card"><div class="stat-val">${avgMiss}</div><div class="stat-lbl">Ø Missionen</div></div>
+      <div class="stat-card"><div class="stat-val">${totalXP}</div><div class="stat-lbl">Gesamt-XP</div></div>
+    </div>
+
+    ${students.length === 0 ? `
+      <div class="empty">
+        <div class="empty-icon">🔑</div>
+        <div class="empty-text">Noch keine Codes. Generiere Codes und verteile sie an die Schüler.</div>
+      </div>
+    ` : `
+      <div class="table-toolbar">
+        <span style="font-size:.82rem;color:var(--text2)">${students.length} Codes · ${active} haben begonnen</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Code</th>
+              <th>Missionen</th>
+              <th>XP</th>
+              <th>Streak</th>
+              <th>⭐ Gold</th>
+              <th>Zuletzt aktiv</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map(s => renderStudentRow(s)).join('')}
+          </tbody>
+        </table>
+      </div>
+    `}
+  `;
+
+  document.getElementById('btn-open-codegen')?.addEventListener('click', openCodegen);
+  document.getElementById('btn-refresh')?.addEventListener('click', () => selectClass(cls));
+  document.getElementById('btn-export-csv')?.addEventListener('click', () => exportCSV(cls, students));
+}
+
+function renderStudentRow(s) {
+  const missions = JSON.parse(s.missions_done || '[]');
+  const mastery  = JSON.parse(s.mastery || '{}');
+  const goldCount = Object.values(mastery).filter(v => v === 'gold').length;
+  const pct = Math.round((missions.length / TOTAL_MISSIONS) * 100);
+  const xp  = parseInt(s.xp) || 0;
+  const streak = parseInt(s.streak) || 0;
+
+  let statusDot, statusTitle;
+  if (!s.last_sync) {
+    statusDot = 'dot-never'; statusTitle = 'Noch nicht gestartet';
+  } else {
+    const ago = (Date.now() - new Date(s.last_sync).getTime()) / 60000;
+    statusDot = ago < 60 ? 'dot-active' : 'dot-idle';
+    statusTitle = ago < 60 ? 'Aktiv (< 1h)' : 'War aktiv';
+  }
+
+  return `<tr>
+    <td><span class="status-dot ${statusDot}" title="${statusTitle}"></span></td>
+    <td class="code-cell">${s.code}</td>
+    <td>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+        <span style="font-size:.8rem">${missions.length}/${TOTAL_MISSIONS}</span>
+      </div>
+    </td>
+    <td>${xp > 0 ? `<span style="color:var(--gold)">${xp}</span>` : '<span class="never">—</span>'}</td>
+    <td>${streak > 0 ? `🔥 ${streak}` : '<span class="never">—</span>'}</td>
+    <td>${goldCount > 0 ? `<span class="mastery-gold">⭐ ${goldCount}</span>` : '<span class="never">—</span>'}</td>
+    <td>${s.last_sync ? relativeTime(s.last_sync) : '<span class="never">nie</span>'}</td>
+  </tr>`;
+}
+
+// ── Code Generator ──
+function openCodegen() {
+  document.getElementById('code-grid').innerHTML = '';
+  lastCodes = [];
+  document.getElementById('codegen-modal').classList.add('open');
+}
+
+async function generateCodes() {
+  const count = parseInt(document.getElementById('codegen-count').value) || 5;
+  document.getElementById('btn-gen-codes').disabled = true;
+  try {
+    const res = await fetch(`${API}/codes.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ class_id: activeClass.id, count })
+    });
+    const data = await res.json();
+    lastCodes = data.codes || [];
+    document.getElementById('code-grid').innerHTML = lastCodes.map(c =>
+      `<div class="code-chip">${c}</div>`
+    ).join('');
+    showToast(`${lastCodes.length} Codes generiert`);
+    selectClass(activeClass); // refresh table
+  } catch { showToast('Fehler beim Generieren', true) }
+  document.getElementById('btn-gen-codes').disabled = false;
+}
+
+function copyAllCodes() {
+  if (!lastCodes.length) return;
+  navigator.clipboard.writeText(lastCodes.join('\n')).then(() => showToast('Codes kopiert'));
+}
+
+// ── CSV Export ──
+function exportCSV(cls, students) {
+  const rows = [['Code', 'Missionen', 'XP', 'Streak', 'Gold-Abschlüsse', 'Zuletzt aktiv']];
+  students.forEach(s => {
+    const missions = JSON.parse(s.missions_done || '[]');
+    const mastery  = JSON.parse(s.mastery || '{}');
+    const gold = Object.values(mastery).filter(v => v === 'gold').length;
+    rows.push([s.code, missions.length, s.xp || 0, s.streak || 0, gold, s.last_sync || '—']);
+  });
+  const csv = rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `klettermath-${cls.name}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ── Utils ──
+function relativeTime(ts) {
+  const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (diff < 60)    return 'gerade eben';
+  if (diff < 3600)  return `vor ${Math.floor(diff/60)} Min.`;
+  if (diff < 86400) return `vor ${Math.floor(diff/3600)} Std.`;
+  if (diff < 172800) return 'gestern';
+  return new Date(ts).toLocaleDateString('de-DE');
+}
+
+function showToast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = err ? 'var(--err)' : 'var(--ok)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
