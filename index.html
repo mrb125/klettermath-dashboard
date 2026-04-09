@@ -914,6 +914,9 @@ function renderSTLView() {
       <button class="btn" id="btn-download-plat" style="font-size:1rem;padding:12px 24px;background:rgba(91,155,213,.15);border-color:rgba(91,155,213,.4);color:#6495ed">
         🏗️ Nur Plattformen (.stl)
       </button>
+      <button class="btn" id="btn-download-indiv" style="font-size:1rem;padding:12px 24px;background:rgba(107,203,119,.1);border-color:rgba(107,203,119,.4);color:#6bcb77">
+        📦 Einzeln für Bambu Lab (.zip)
+      </button>
       <a href="https://www.viewstl.com" target="_blank" rel="noopener"
          style="display:inline-flex;align-items:center;padding:12px 18px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text1);text-decoration:none;font-size:.85rem;font-weight:700">
         🔍 Online-Vorschau (viewstl.com)
@@ -940,6 +943,14 @@ function renderSTLView() {
       document.getElementById('stl-status').textContent = '✗ Fehler: ' + e.message;
     }
   });
+  document.getElementById('btn-download-indiv').addEventListener('click', () => {
+    document.getElementById('stl-status').textContent = 'Generiere ZIP …';
+    try {
+      downloadIndividualDashboard();
+    } catch (e) {
+      document.getElementById('stl-status').textContent = '✗ Fehler: ' + e.message;
+    }
+  });
 }
 
 // ── STL-Generator (inline, kein Modul-Import nötig) ──
@@ -955,7 +966,7 @@ function downloadParkSTLDashboard() {
     { id:7, lbl:'E', x:10, y:-2, z:1 },
   ];
   const ROPES = [[0,1],[0,3],[1,2],[1,3],[2,4],[2,7],[3,4],[3,5],[4,6],[5,6],[6,7]];
-  const S=10, BX0=-60, BX1=110, BY0=-50, BY1=100, BASE_Z=3, SOCK_H=4, SOCK_Z=7, SOCK_R=9, N=16;
+  const S=10, BX0=-60, BX1=110, BY0=-50, BY1=100, BASE_Z=5, SOCK_H=6, SOCK_Z=11, SOCK_R=12, N=16;
 
   function fv([x,y,z]) { return `${x.toFixed(3)} ${y.toFixed(3)} ${z.toFixed(3)}`; }
   function cn(v1,v2,v3) {
@@ -1069,7 +1080,7 @@ function downloadPlatformsDashboard() {
     {id:3,lbl:'G',x:-3,y:6,z:5},{id:4,lbl:'T',x:6,y:-4,z:7},{id:5,lbl:'H',x:-5,y:8,z:2},
     {id:6,lbl:'K',x:5,y:9,z:4},{id:7,lbl:'E',x:10,y:-2,z:1},
   ];
-  const S=10,BASE_Z=3,SOCK_H=4,SOCK_Z=7,SOCK_R=9,N=16;
+  const S=10,BASE_Z=5,SOCK_H=6,SOCK_Z=11,SOCK_R=12,N=16;
   function fv([x,y,z]){return`${x.toFixed(3)} ${y.toFixed(3)} ${z.toFixed(3)}`;}
   function cn(v1,v2,v3){const ax=v2[0]-v1[0],ay=v2[1]-v1[1],az=v2[2]-v1[2],bx=v3[0]-v1[0],by=v3[1]-v1[1],bz=v3[2]-v1[2];const nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;return`${(nx/l).toFixed(6)} ${(ny/l).toFixed(6)} ${(nz/l).toFixed(6)}`;}
   function tri(v1,v2,v3){return`  facet normal ${cn(v1,v2,v3)}\n    outer loop\n      vertex ${fv(v1)}\n      vertex ${fv(v2)}\n      vertex ${fv(v3)}\n    endloop\n  endfacet\n`;}
@@ -1100,6 +1111,69 @@ function downloadPlatformsDashboard() {
   const a=document.createElement('a');
   a.href=url;a.download='klettermath-plattformen.stl';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+// Einzelne STL pro Plattform als ZIP (für Bambu Lab — separate Plates)
+async function downloadIndividualDashboard() {
+  const PLATS=[
+    {id:0,lbl:'S',name:'Start',x:0,y:0,z:0},{id:1,lbl:'A',name:'Adlerhorst',x:4,y:1,z:3},
+    {id:2,lbl:'B',name:'Brücke',x:8,y:3,z:1},{id:3,lbl:'G',name:'Gipfel',x:-3,y:6,z:5},
+    {id:4,lbl:'T',name:'Trapez',x:6,y:-4,z:7},{id:5,lbl:'H',name:'Hängenest',x:-5,y:8,z:2},
+    {id:6,lbl:'K',name:'Kletternetz',x:5,y:9,z:4},{id:7,lbl:'E',name:'Endstation',x:10,y:-2,z:1},
+  ];
+  // Re-use buildPlat from closure (same geometry, updated constants)
+  const S=10,BASE_Z=5,SOCK_H=6,SOCK_Z=11,SOCK_R=12,N=16;
+  function fv([x,y,z]){return`${x.toFixed(3)} ${y.toFixed(3)} ${z.toFixed(3)}`;}
+  function cn(v1,v2,v3){const ax=v2[0]-v1[0],ay=v2[1]-v1[1],az=v2[2]-v1[2],bx=v3[0]-v1[0],by=v3[1]-v1[1],bz=v3[2]-v1[2];const nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;return`${(nx/l).toFixed(6)} ${(ny/l).toFixed(6)} ${(nz/l).toFixed(6)}`;}
+  function tri(v1,v2,v3){return`  facet normal ${cn(v1,v2,v3)}\n    outer loop\n      vertex ${fv(v1)}\n      vertex ${fv(v2)}\n      vertex ${fv(v3)}\n    endloop\n  endfacet\n`;}
+  function box(x0,y0,z0,x1,y1,z1){return[tri([x0,y0,z0],[x1,y1,z0],[x1,y0,z0]),tri([x0,y0,z0],[x0,y1,z0],[x1,y1,z0]),tri([x0,y0,z1],[x1,y0,z1],[x1,y1,z1]),tri([x0,y0,z1],[x1,y1,z1],[x0,y1,z1]),tri([x0,y0,z0],[x1,y0,z0],[x1,y0,z1]),tri([x0,y0,z0],[x1,y0,z1],[x0,y0,z1]),tri([x1,y1,z0],[x0,y1,z1],[x0,y1,z0]),tri([x1,y1,z0],[x1,y1,z1],[x0,y1,z1]),tri([x0,y1,z0],[x0,y0,z0],[x0,y0,z1]),tri([x0,y1,z0],[x0,y0,z1],[x0,y1,z1]),tri([x1,y0,z0],[x1,y1,z0],[x1,y1,z1]),tri([x1,y0,z0],[x1,y1,z1],[x1,y0,z1])].join('');}
+  function cyl(cx,cy,z0,z1,r,n=N){const pts=Array.from({length:n},(_,i)=>{const a=(i/n)*Math.PI*2;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});let o='';for(let i=0;i<n;i++){const j=(i+1)%n,[ax,ay]=pts[i],[bx,by]=pts[j];o+=tri([ax,ay,z0],[bx,by,z0],[bx,by,z1]);o+=tri([ax,ay,z0],[bx,by,z1],[ax,ay,z1]);o+=tri([cx,cy,z0],[bx,by,z0],[ax,ay,z0]);o+=tri([cx,cy,z1],[ax,ay,z1],[bx,by,z1]);}return o;}
+  function con(cx,cy,z0,z1,r,n=N){const pts=Array.from({length:n},(_,i)=>{const a=(i/n)*Math.PI*2;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});const tip=[cx,cy,z1];let o='';for(let i=0;i<n;i++){const j=(i+1)%n,[ax,ay]=pts[i],[bx,by]=pts[j];o+=tri([ax,ay,z0],[bx,by,z0],tip);o+=tri([cx,cy,z0],[bx,by,z0],[ax,ay,z0]);}return o;}
+  function buildOne(p){
+    const cx=p.x*S,cy=p.y*S,pH=p.z*S;
+    let o=cyl(cx,cy,BASE_Z,SOCK_Z,SOCK_R);
+    switch(p.lbl){
+      case'S':o+=cyl(cx-6,cy,SOCK_Z,SOCK_Z+14,2.5);o+=cyl(cx+6,cy,SOCK_Z,SOCK_Z+14,2.5);o+=box(cx-6.5,cy-2,SOCK_Z+12,cx+6.5,cy+2,SOCK_Z+15);break;
+      case'A':o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,4);o+=cyl(cx,cy,SOCK_Z+pH,SOCK_Z+pH+2,11);o+=con(cx,cy,SOCK_Z+pH+6,SOCK_Z+pH+14,10);break;
+      case'B':o+=cyl(cx-7,cy,SOCK_Z,SOCK_Z+pH+10,2.5);o+=cyl(cx+7,cy,SOCK_Z,SOCK_Z+pH+10,2.5);o+=box(cx-9,cy-4,SOCK_Z+pH,cx+9,cy+4,SOCK_Z+pH+2);o+=box(cx-7.5,cy-1.5,SOCK_Z+pH+8,cx+7.5,cy+1.5,SOCK_Z+pH+11);break;
+      case'G':o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,5);o+=cyl(cx,cy,SOCK_Z+pH-4,SOCK_Z+pH+6,13);o+=cyl(cx,cy,SOCK_Z+pH+4,SOCK_Z+pH+12,9);o+=con(cx,cy,SOCK_Z+pH+10,SOCK_Z+pH+20,7);break;
+      case'T':{const top=SOCK_Z+pH,off=4.5;[[-off,-off],[-off,off],[off,-off],[off,off]].forEach(([dx,dy])=>o+=cyl(cx+dx,cy+dy,SOCK_Z,top,2.5));o+=box(cx-7,cy-7,top,cx+7,cy+7,top+2.5);o+=con(cx,cy,top+5,top+14,9);break;}
+      case'H':o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,3);o+=box(cx-5.5,cy-5.5,SOCK_Z+pH,cx+5.5,cy+5.5,SOCK_Z+pH+9);o+=con(cx,cy,SOCK_Z+pH+8,SOCK_Z+pH+16,8);break;
+      case'K':o+=cyl(cx-8,cy,SOCK_Z,SOCK_Z+pH+5,2.5);o+=cyl(cx+8,cy,SOCK_Z,SOCK_Z+pH+5,2.5);o+=box(cx-8,cy-2,SOCK_Z,cx+8,cy+2,SOCK_Z+pH);o+=box(cx-9,cy-3,SOCK_Z+pH,cx+9,cy+3,SOCK_Z+pH+3);break;
+      case'E':o+=cyl(cx,cy,SOCK_Z,SOCK_Z+25,3);o+=box(cx-12,cy-1.5,SOCK_Z+23,cx+2,cy+1.5,SOCK_Z+26);o+=cyl(cx-10,cy,SOCK_Z+22,SOCK_Z+28,4);o+=box(cx-13,cy-3.5,SOCK_Z+pH-4,cx-7,cy+3.5,SOCK_Z+pH+2);break;
+      default:o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,4);o+=cyl(cx,cy,SOCK_Z+pH,SOCK_Z+pH+2,6);
+    }
+    return o;
+  }
+  // Versuche fflate ZIP, sonst Einzel-Downloads
+  try {
+    const {zipSync} = await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');
+    const files={};
+    PLATS.forEach(p=>{
+      const stl=buildOne(p);
+      const content=`solid km_${p.lbl}\n${stl}endsolid km_${p.lbl}\n`;
+      files[`km_${p.lbl}_${p.name}.stl`]=new TextEncoder().encode(content);
+    });
+    const zipped=zipSync(files,{level:1});
+    const blob=new Blob([zipped],{type:'application/zip'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='klettermath-plattformen-einzeln.zip';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    document.getElementById('stl-status').textContent='✓ ZIP mit 8 STL-Dateien heruntergeladen — in Bambu Studio: Drag & Drop der STL-Dateien, jede auf eigene Plate';
+  } catch(e) {
+    // Fallback
+    PLATS.forEach((p,i)=>setTimeout(()=>{
+      const stl=buildOne(p);
+      const data=`solid km_${p.lbl}\n${stl}endsolid km_${p.lbl}\n`;
+      const blob=new Blob([data],{type:'model/stl'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=`km_${p.lbl}_${p.name}.stl`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    },i*300));
+    document.getElementById('stl-status').textContent='✓ 8 Einzeldateien werden nacheinander heruntergeladen';
+  }
 }
 
 // ── Task Library Data ──
