@@ -218,6 +218,7 @@ tr:hover td { background: rgba(255,255,255,.02) }
     <div class="sidebar-nav">
       <button class="sidebar-nav-btn active" id="nav-classes">🏫 Klassen</button>
       <button class="sidebar-nav-btn" id="nav-tasks">📚 Aufgaben-Bibliothek</button>
+      <button class="sidebar-nav-btn" id="nav-stl" title="3D-Druckmodell des Kletterparks herunterladen">🖨️ Park-Modell (STL)</button>
     </div>
     <div class="sidebar-section" id="sidebar-classes-section">
       <div class="sidebar-label">Klassen</div>
@@ -830,9 +831,224 @@ document.getElementById('nav-tasks').addEventListener('click', () => {
   currentView = 'tasks';
   document.getElementById('nav-tasks').classList.add('active');
   document.getElementById('nav-classes').classList.remove('active');
+  document.getElementById('nav-stl').classList.remove('active');
   document.getElementById('sidebar-classes-section').style.display = 'none';
   renderTasksView('alle');
 });
+
+document.getElementById('nav-stl').addEventListener('click', () => {
+  document.getElementById('nav-stl').classList.add('active');
+  document.getElementById('nav-classes').classList.remove('active');
+  document.getElementById('nav-tasks').classList.remove('active');
+  document.getElementById('sidebar-classes-section').style.display = 'none';
+  renderSTLView();
+});
+
+// ── STL View & Generator ──
+function renderSTLView() {
+  document.getElementById('content').innerHTML = `
+    <div class="page-header" style="margin-bottom:20px">
+      <div>
+        <div class="page-title">🖨️ Park-Modell (STL)</div>
+        <div class="page-subtitle">3D-druckbares Kletterpark-Modell für Tischaufgaben · Maßstab 1:10 (1 Einheit = 10 mm)</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px">
+      <div class="stat-card">
+        <div class="stat-val" style="font-size:1.4rem">8</div>
+        <div class="stat-lbl">Plattformen (S A B G T H K E)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="font-size:1.4rem">11</div>
+        <div class="stat-lbl">Seilverbindungen im Modell</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="font-size:1.4rem">170×150</div>
+        <div class="stat-lbl">Bodenplatte in mm</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="font-size:1.4rem">82 mm</div>
+        <div class="stat-lbl">Max. Höhe (Turm T)</div>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--rope);margin-bottom:12px">Plattform-Designs</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        ${[
+          {lbl:'S',name:'Start',design:'Eingangstor',coords:'(0|0|0)',h:'0 mm'},
+          {lbl:'A',name:'Adlerhorst',design:'Baumhaus',coords:'(4|1|3)',h:'30 mm'},
+          {lbl:'B',name:'Brücke',design:'Hängebrücke',coords:'(8|3|1)',h:'10 mm'},
+          {lbl:'G',name:'Gipfel',design:'Baumkrone',coords:'(−3|6|5)',h:'50 mm'},
+          {lbl:'T',name:'Trapez',design:'Aussichtsturm',coords:'(6|−4|7)',h:'70 mm'},
+          {lbl:'H',name:'Hängenest',design:'Hütte',coords:'(−5|8|2)',h:'20 mm'},
+          {lbl:'K',name:'Kletternetz',design:'Kletterwand',coords:'(5|9|4)',h:'40 mm'},
+          {lbl:'E',name:'Endstation',design:'Seilbahnmast',coords:'(10|−2|1)',h:'10 mm'},
+        ].map(p => `
+          <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--gold);font-weight:700">${p.lbl}</span>
+              <span style="font-weight:700;font-size:.88rem">${p.name}</span>
+            </div>
+            <div style="font-size:.75rem;color:var(--rope)">${p.design}</div>
+            <div style="font-size:.72rem;color:var(--text2);margin-top:2px">${p.coords} · Höhe ${p.h}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:rgba(232,160,48,.06);border:1px solid rgba(232,160,48,.2);border-radius:12px;padding:20px;margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--rope);margin-bottom:8px">Druckempfehlungen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.83rem;color:var(--text2)">
+        <div>🖨️ FDM-Drucker (PLA/PETG)</div><div>Schichthöhe: 0.2 mm</div>
+        <div>🔩 Nozzle: 0.4 mm</div><div>Infill: 15–20 %</div>
+        <div>⏱️ Druckzeit: ca. 3–4 Std.</div><div>Supports: nur für Seile nötig</div>
+        <div>📐 Platte: ≥ 200×200 mm</div><div>Kein Rafting nötig</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn" id="btn-download-stl" style="font-size:1rem;padding:12px 24px">
+        ⬇ klettermath-park.stl herunterladen
+      </button>
+      <a href="https://www.viewstl.com" target="_blank" rel="noopener"
+         style="display:inline-flex;align-items:center;padding:12px 18px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;color:var(--text1);text-decoration:none;font-size:.85rem;font-weight:700">
+        🔍 Online-Vorschau (viewstl.com)
+      </a>
+    </div>
+    <div id="stl-status" style="margin-top:12px;font-size:.82rem;color:var(--text2)"></div>
+  `;
+
+  document.getElementById('btn-download-stl').addEventListener('click', () => {
+    document.getElementById('stl-status').textContent = 'Generiere STL …';
+    try {
+      downloadParkSTLDashboard();
+      document.getElementById('stl-status').textContent = '✓ Download gestartet — Datei klettermath-park.stl';
+    } catch (e) {
+      document.getElementById('stl-status').textContent = '✗ Fehler: ' + e.message;
+    }
+  });
+}
+
+// ── STL-Generator (inline, kein Modul-Import nötig) ──
+function downloadParkSTLDashboard() {
+  const PLATS = [
+    { id:0, lbl:'S', x:0,  y:0,  z:0 },
+    { id:1, lbl:'A', x:4,  y:1,  z:3 },
+    { id:2, lbl:'B', x:8,  y:3,  z:1 },
+    { id:3, lbl:'G', x:-3, y:6,  z:5 },
+    { id:4, lbl:'T', x:6,  y:-4, z:7 },
+    { id:5, lbl:'H', x:-5, y:8,  z:2 },
+    { id:6, lbl:'K', x:5,  y:9,  z:4 },
+    { id:7, lbl:'E', x:10, y:-2, z:1 },
+  ];
+  const ROPES = [[0,1],[0,3],[1,2],[1,3],[2,4],[2,7],[3,4],[3,5],[4,6],[5,6],[6,7]];
+  const S=10, BX0=-60, BX1=110, BY0=-50, BY1=100, BASE_Z=3, SOCK_H=4, SOCK_Z=7, SOCK_R=9, N=16;
+
+  function fv([x,y,z]) { return `${x.toFixed(3)} ${y.toFixed(3)} ${z.toFixed(3)}`; }
+  function cn(v1,v2,v3) {
+    const ax=v2[0]-v1[0],ay=v2[1]-v1[1],az=v2[2]-v1[2],bx=v3[0]-v1[0],by=v3[1]-v1[1],bz=v3[2]-v1[2];
+    const nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx,l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+    return `${(nx/l).toFixed(6)} ${(ny/l).toFixed(6)} ${(nz/l).toFixed(6)}`;
+  }
+  function tri(v1,v2,v3) {
+    return `  facet normal ${cn(v1,v2,v3)}\n    outer loop\n      vertex ${fv(v1)}\n      vertex ${fv(v2)}\n      vertex ${fv(v3)}\n    endloop\n  endfacet\n`;
+  }
+  function box(x0,y0,z0,x1,y1,z1) {
+    return [tri([x0,y0,z0],[x1,y1,z0],[x1,y0,z0]),tri([x0,y0,z0],[x0,y1,z0],[x1,y1,z0]),
+            tri([x0,y0,z1],[x1,y0,z1],[x1,y1,z1]),tri([x0,y0,z1],[x1,y1,z1],[x0,y1,z1]),
+            tri([x0,y0,z0],[x1,y0,z0],[x1,y0,z1]),tri([x0,y0,z0],[x1,y0,z1],[x0,y0,z1]),
+            tri([x1,y1,z0],[x0,y1,z1],[x0,y1,z0]),tri([x1,y1,z0],[x1,y1,z1],[x0,y1,z1]),
+            tri([x0,y1,z0],[x0,y0,z0],[x0,y0,z1]),tri([x0,y1,z0],[x0,y0,z1],[x0,y1,z1]),
+            tri([x1,y0,z0],[x1,y1,z0],[x1,y1,z1]),tri([x1,y0,z0],[x1,y1,z1],[x1,y0,z1])].join('');
+  }
+  function cyl(cx,cy,z0,z1,r,n=N) {
+    const pts=Array.from({length:n},(_,i)=>{const a=(i/n)*Math.PI*2;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});
+    let o='';
+    for(let i=0;i<n;i++){const j=(i+1)%n,[ax,ay]=pts[i],[bx,by]=pts[j];
+      o+=tri([ax,ay,z0],[bx,by,z0],[bx,by,z1]);o+=tri([ax,ay,z0],[bx,by,z1],[ax,ay,z1]);
+      o+=tri([cx,cy,z0],[bx,by,z0],[ax,ay,z0]);o+=tri([cx,cy,z1],[ax,ay,z1],[bx,by,z1]);}
+    return o;
+  }
+  function con(cx,cy,z0,z1,r,n=N) {
+    const pts=Array.from({length:n},(_,i)=>{const a=(i/n)*Math.PI*2;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];});
+    const tip=[cx,cy,z1];let o='';
+    for(let i=0;i<n;i++){const j=(i+1)%n,[ax,ay]=pts[i],[bx,by]=pts[j];
+      o+=tri([ax,ay,z0],[bx,by,z0],tip);o+=tri([cx,cy,z0],[bx,by,z0],[ax,ay,z0]);}
+    return o;
+  }
+  function tube([ax,ay,az],[bx,by,bz],r,n=12) {
+    const dx=bx-ax,dy=by-ay,dz=bz-az,len=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    if(len<0.5)return'';
+    const[ux,uy,uz]=[dx/len,dy/len,dz/len];
+    let[px,py,pz]=Math.abs(uz)<0.9?[-uy,ux,0]:[0,-uz,uy];
+    const pl=Math.sqrt(px*px+py*py+pz*pz);[px,py,pz]=[px/pl,py/pl,pz/pl];
+    const[qx,qy,qz]=[uy*pz-uz*py,uz*px-ux*pz,ux*py-uy*px];
+    const cA=[],cB=[];
+    for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2,ca=Math.cos(a)*r,sa=Math.sin(a)*r;
+      cA.push([ax+px*ca+qx*sa,ay+py*ca+qy*sa,az+pz*ca+qz*sa]);
+      cB.push([bx+px*ca+qx*sa,by+py*ca+qy*sa,bz+pz*ca+qz*sa]);}
+    let o='';
+    for(let i=0;i<n;i++){const j=(i+1)%n;
+      o+=tri(cA[i],cA[j],cB[j]);o+=tri(cA[i],cB[j],cB[i]);
+      o+=tri([ax,ay,az],cA[j],cA[i]);o+=tri([bx,by,bz],cB[i],cB[j]);}
+    return o;
+  }
+
+  // Plattform-Geometrien (kompakte Version)
+  function buildPlat(p) {
+    const cx=p.x*S,cy=p.y*S,pH=p.z*S;
+    let o=cyl(cx,cy,BASE_Z,SOCK_Z,SOCK_R),capZ;
+    switch(p.lbl) {
+      case'S': o+=cyl(cx-6,cy,SOCK_Z,SOCK_Z+14,2.5);o+=cyl(cx+6,cy,SOCK_Z,SOCK_Z+14,2.5);
+               o+=box(cx-6.5,cy-2,SOCK_Z+12,cx+6.5,cy+2,SOCK_Z+15);capZ=SOCK_Z+3;break;
+      case'A': o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,4);o+=cyl(cx,cy,SOCK_Z+pH,SOCK_Z+pH+2,11);
+               o+=con(cx,cy,SOCK_Z+pH+6,SOCK_Z+pH+14,10);capZ=SOCK_Z+pH+2;break;
+      case'B': o+=cyl(cx-7,cy,SOCK_Z,SOCK_Z+pH+10,2.5);o+=cyl(cx+7,cy,SOCK_Z,SOCK_Z+pH+10,2.5);
+               o+=box(cx-9,cy-4,SOCK_Z+pH,cx+9,cy+4,SOCK_Z+pH+2);
+               o+=box(cx-7.5,cy-1.5,SOCK_Z+pH+8,cx+7.5,cy+1.5,SOCK_Z+pH+11);capZ=SOCK_Z+pH+2;break;
+      case'G': o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,5);o+=cyl(cx,cy,SOCK_Z+pH-4,SOCK_Z+pH+6,13);
+               o+=cyl(cx,cy,SOCK_Z+pH+4,SOCK_Z+pH+12,9);o+=con(cx,cy,SOCK_Z+pH+10,SOCK_Z+pH+20,7);capZ=SOCK_Z+pH+6;break;
+      case'T': {const top=SOCK_Z+pH,off=4.5;
+               [[-off,-off],[-off,off],[off,-off],[off,off]].forEach(([dx,dy])=>o+=cyl(cx+dx,cy+dy,SOCK_Z,top,2.5));
+               o+=box(cx-7,cy-7,top,cx+7,cy+7,top+2.5);o+=con(cx,cy,top+5,top+14,9);capZ=top+2.5;break;}
+      case'H': o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,3);o+=box(cx-5.5,cy-5.5,SOCK_Z+pH,cx+5.5,cy+5.5,SOCK_Z+pH+9);
+               o+=con(cx,cy,SOCK_Z+pH+8,SOCK_Z+pH+16,8);capZ=SOCK_Z+pH+9;break;
+      case'K': o+=cyl(cx-8,cy,SOCK_Z,SOCK_Z+pH+5,2.5);o+=cyl(cx+8,cy,SOCK_Z,SOCK_Z+pH+5,2.5);
+               o+=box(cx-8,cy-2,SOCK_Z,cx+8,cy+2,SOCK_Z+pH);
+               o+=box(cx-9,cy-3,SOCK_Z+pH,cx+9,cy+3,SOCK_Z+pH+3);capZ=SOCK_Z+pH;break;
+      case'E': o+=cyl(cx,cy,SOCK_Z,SOCK_Z+25,3);o+=box(cx-12,cy-1.5,SOCK_Z+23,cx+2,cy+1.5,SOCK_Z+26);
+               o+=cyl(cx-10,cy,SOCK_Z+22,SOCK_Z+28,4);
+               o+=box(cx-13,cy-3.5,SOCK_Z+pH-4,cx-7,cy+3.5,SOCK_Z+pH+2);capZ=SOCK_Z+pH+2;break;
+      default: o+=cyl(cx,cy,SOCK_Z,SOCK_Z+pH,4);o+=cyl(cx,cy,SOCK_Z+pH,SOCK_Z+pH+2,6);capZ=SOCK_Z+pH+2;
+    }
+    return{o,capZ};
+  }
+
+  let data='solid klettermath_park\n';
+  // Bodenplatte
+  data+=box(BX0,BY0,0,BX1,BY1,BASE_Z);
+  // Gitter
+  for(let xi=-6;xi<=11;xi++){const x=xi*S,ax=xi===0;data+=box(x-(ax?0.75:0.375),BY0,BASE_Z,x+(ax?0.75:0.375),BY1,BASE_Z+(ax?2:1));}
+  for(let yi=-5;yi<=10;yi++){const y=yi*S,ay=yi===0;data+=box(BX0,y-(ay?0.75:0.375),BASE_Z,BX1,y+(ay?0.75:0.375),BASE_Z+(ay?2:1));}
+  // Achspfeile
+  data+=con(BX1,0,BASE_Z+2,BASE_Z+10,4);data+=con(0,BY1,BASE_Z+2,BASE_Z+10,4);
+  // Plattformen + capZ
+  const capZs={};
+  PLATS.forEach(p=>{const{o,capZ}=buildPlat(p);data+=o;capZs[p.id]=capZ;});
+  // Seile
+  ROPES.forEach(([ai,bi])=>{
+    const pa=PLATS[ai],pb=PLATS[bi];
+    data+=tube([pa.x*S,pa.y*S,capZs[pa.id]],[pb.x*S,pb.y*S,capZs[pb.id]],1.5);
+  });
+  data+='endsolid klettermath_park\n';
+
+  const blob=new Blob([data],{type:'model/stl'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='klettermath-park.stl';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
 
 // ── Task Library Data ──
 const TASKS = [
