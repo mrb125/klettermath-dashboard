@@ -1,6 +1,10 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 require 'config.php';
 header('Content-Type: text/plain');
+
+try {
 
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS km_classes (
@@ -32,3 +36,4 @@ CREATE TABLE IF NOT EXISTS km_progress (
 ");
 
 echo "Setup abgeschlossen. Tabellen angelegt.\n";
+} catch (Exception $e) { echo "ERROR: " . $e->getMessage() . "\n"; }
