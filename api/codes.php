@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   $stmt = $pdo->prepare('
     SELECT c.code, c.created_at,
-           p.missions_done, p.xp, p.streak, p.mastery, p.last_sync
+           p.missions_done, p.xp, p.streak, p.mastery, p.errors, p.last_sync
     FROM km_codes c
     LEFT JOIN km_progress p ON p.code = c.code
     WHERE c.class_id = ?

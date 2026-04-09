@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KletterMath — Lehrkraft-Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 :root {
   --bg1: #1a1a2e; --bg2: #16213e; --bg3: #0f3460; --bg4: #1e2a4a;
@@ -92,6 +93,74 @@ tr:hover td { background: rgba(255,255,255,.02) }
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: .88rem; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; z-index: 200 }
 .toast.show { opacity: 1; transform: translateY(0) }
 
+/* ── Custom Missions Editor ── */
+.cm-section { margin-top: 28px }
+.cm-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 2px; color: var(--rope); margin-bottom: 14px; display: flex; align-items: center; gap: 12px }
+.cm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px }
+.cm-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px }
+.cm-item-title { flex: 1; font-weight: 700; font-size: .9rem }
+.cm-item-meta { font-size: .75rem; color: var(--text2) }
+.cm-form { background: var(--bg4); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: none }
+.cm-form.open { display: block }
+.cm-form label { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); margin: 12px 0 4px }
+.cm-form input, .cm-form textarea, .cm-form select {
+  width: 100%; background: var(--bg1); border: 1px solid var(--border);
+  color: var(--text1); padding: 8px 10px; border-radius: 6px;
+  font-family: var(--font); font-size: .88rem
+}
+.cm-form input:focus, .cm-form textarea:focus { outline: none; border-color: var(--rope) }
+.cm-form textarea { min-height: 72px; resize: vertical }
+.cm-step-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 10px }
+.cm-step-row { display: flex; gap: 8px; margin-top: 8px }
+.cm-step-row input { flex: 1 }
+
+/* ── Student Timeline ── */
+.timeline-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 110; align-items: center; justify-content: center }
+.timeline-modal.open { display: flex }
+.timeline-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column }
+.timeline-box h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 2px; margin-bottom: 4px }
+.timeline-scroll { overflow-y: auto; flex: 1; margin-top: 14px }
+.timeline-item { display: flex; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--border) }
+.timeline-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 5px }
+.timeline-dot.gold   { background: var(--gold) }
+.timeline-dot.silver { background: var(--text2) }
+.timeline-mission { font-size: .88rem; font-weight: 600 }
+.timeline-date { font-size: .75rem; color: var(--text2); margin-top: 2px }
+.detail-btn { font-size: .72rem; color: var(--text2); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px }
+.detail-btn:hover { color: var(--rope); background: var(--card) }
+
+/* ── Fehleranalyse Widget ── */
+.error-widget { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px }
+.error-widget-title { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); margin-bottom: 14px; font-weight: 700 }
+.error-bars { display: flex; flex-direction: column; gap: 8px }
+.error-bar-row { display: flex; align-items: center; gap: 10px }
+.error-bar-label { width: 160px; font-size: .82rem; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.error-bar-track { flex: 1; height: 8px; background: var(--bg4); border-radius: 99px; overflow: hidden }
+.error-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ff5e5b, #ff8c42); transition: width .4s ease }
+.error-bar-count { font-size: .78rem; color: var(--text2); width: 28px; text-align: right; flex-shrink: 0 }
+.error-none { color: var(--text2); font-size: .85rem; font-style: italic }
+
+/* ── QR Modal ── */
+.qr-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 110; align-items: center; justify-content: center }
+.qr-modal.open { display: flex }
+.qr-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 360px; max-width: 95vw; text-align: center }
+.qr-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 2px; margin-bottom: 4px }
+.qr-subtitle { font-size: .8rem; color: var(--text2); margin-bottom: 16px }
+.qr-canvas-wrap { background: #fff; border-radius: 10px; padding: 16px; display: inline-block; margin-bottom: 16px }
+.qr-code-display { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; letter-spacing: 4px; color: var(--gold); margin-bottom: 16px }
+.qr-actions { display: flex; gap: 10px; justify-content: center }
+
+/* ── QR Print Sheet ── */
+@media print {
+  body > *:not(#qr-print-sheet) { display: none !important }
+  #qr-print-sheet { display: block !important }
+}
+#qr-print-sheet { display: none }
+.qr-sheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px }
+.qr-card { border: 1px solid #ccc; border-radius: 8px; padding: 14px; text-align: center; break-inside: avoid }
+.qr-card-code { font-family: monospace; font-size: 1.1rem; font-weight: bold; letter-spacing: 3px; margin-top: 8px; color: #222 }
+.qr-card-hint { font-size: .7rem; color: #666; margin-top: 4px }
+
 /* ── Setup info ── */
 .setup-panel { background: var(--bg4); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 600px; margin-bottom: 24px; display: none }
 .setup-panel.show { display: block }
@@ -163,11 +232,39 @@ KM_DB_PASS   → MySQL-Passwort</pre>
   </div>
 </div>
 
+<!-- Timeline Modal -->
+<div class="timeline-modal" id="timeline-modal">
+  <div class="timeline-box">
+    <h3 id="timeline-title">Verlauf</h3>
+    <div style="font-size:.8rem;color:var(--text2)" id="timeline-subtitle"></div>
+    <div class="timeline-scroll" id="timeline-content"></div>
+    <button class="btn ghost" style="margin-top:16px" id="btn-timeline-close">Schließen</button>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div class="qr-modal" id="qr-modal">
+  <div class="qr-box">
+    <div class="qr-title">QR-Code</div>
+    <div class="qr-subtitle">Schüler scannt → App öffnet sich mit Code</div>
+    <div class="qr-canvas-wrap"><canvas id="qr-canvas"></canvas></div>
+    <div class="qr-code-display" id="qr-code-text"></div>
+    <div class="qr-actions">
+      <button class="btn" id="btn-qr-download">⬇ PNG</button>
+      <button class="btn ghost" id="btn-qr-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Print Sheet (hidden, shown on print) -->
+<div id="qr-print-sheet"></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const API = './api';
 const TOTAL_MISSIONS = 12;
+const APP_URL = 'https://mrbl.4lima.de/klettermath-v4/';
 
 let classes = [];
 let activeClass = null;
@@ -273,6 +370,8 @@ function renderClassView(cls, students) {
         <button class="btn sm" id="btn-open-codegen">+ Codes generieren</button>
         <button class="btn sm ghost" id="btn-refresh">↺ Aktualisieren</button>
         <button class="btn sm ghost" id="btn-export-csv">⬇ CSV</button>
+        <button class="btn sm ghost" id="btn-print-qr">🖨 QR-Blatt</button>
+        <button class="btn sm ghost" id="btn-exam-link" title="Prüfungs-Link kopieren">🎓 Prüfungs-Link</button>
       </div>
     </div>
 
@@ -281,6 +380,13 @@ function renderClassView(cls, students) {
       <div class="stat-card"><div class="stat-val">${active}</div><div class="stat-lbl">Aktive Schüler</div></div>
       <div class="stat-card"><div class="stat-val">${avgMiss}</div><div class="stat-lbl">Ø Missionen</div></div>
       <div class="stat-card"><div class="stat-val">${totalXP}</div><div class="stat-lbl">Gesamt-XP</div></div>
+    </div>
+
+    ${renderErrorWidget(students)}
+
+    <div class="cm-section">
+      <div class="cm-section-title">📝 Lehrer-Aufgaben</div>
+      <div id="cm-container"><div style="color:var(--text2);font-size:.85rem">Lade…</div></div>
     </div>
 
     ${students.length === 0 ? `
@@ -313,9 +419,22 @@ function renderClassView(cls, students) {
     `}
   `;
 
+  loadAndRenderCustomMissions(cls);
+
   document.getElementById('btn-open-codegen')?.addEventListener('click', openCodegen);
   document.getElementById('btn-refresh')?.addEventListener('click', () => selectClass(cls));
   document.getElementById('btn-export-csv')?.addEventListener('click', () => exportCSV(cls, students));
+  document.getElementById('btn-print-qr')?.addEventListener('click', () => printAllQR(students));
+  document.getElementById('btn-exam-link')?.addEventListener('click', () => {
+    const url = APP_URL + '?exam=1';
+    navigator.clipboard.writeText(url).then(() =>
+      showToast('Prüfungs-Link kopiert: ' + url)
+    ).catch(() => prompt('Prüfungs-Link:', url));
+  });
+  document.querySelectorAll('.qr-btn').forEach(btn =>
+    btn.addEventListener('click', () => openQR(btn.dataset.code)));
+  document.querySelectorAll('.detail-btn').forEach(btn =>
+    btn.addEventListener('click', () => openTimeline(btn.dataset.code)));
 }
 
 function renderStudentRow(s) {
@@ -337,7 +456,7 @@ function renderStudentRow(s) {
 
   return `<tr>
     <td><span class="status-dot ${statusDot}" title="${statusTitle}"></span></td>
-    <td class="code-cell">${s.code}</td>
+    <td class="code-cell" style="white-space:nowrap">${s.code} <button class="btn sm ghost qr-btn" data-code="${s.code}" title="QR-Code anzeigen" style="padding:2px 6px;font-size:.75rem;margin-left:4px">QR</button></td>
     <td>
       <div class="progress-bar-wrap">
         <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
@@ -347,7 +466,10 @@ function renderStudentRow(s) {
     <td>${xp > 0 ? `<span style="color:var(--gold)">${xp}</span>` : '<span class="never">—</span>'}</td>
     <td>${streak > 0 ? `🔥 ${streak}` : '<span class="never">—</span>'}</td>
     <td>${goldCount > 0 ? `<span class="mastery-gold">⭐ ${goldCount}</span>` : '<span class="never">—</span>'}</td>
-    <td>${s.last_sync ? relativeTime(s.last_sync) : '<span class="never">nie</span>'}</td>
+    <td>
+      ${s.last_sync ? relativeTime(s.last_sync) : '<span class="never">nie</span>'}
+      ${s.last_sync ? `<button class="detail-btn" data-code="${s.code}" title="Verlauf anzeigen">📋</button>` : ''}
+    </td>
   </tr>`;
 }
 
@@ -399,6 +521,257 @@ function exportCSV(cls, students) {
   a.href = url; a.download = `klettermath-${cls.name}-${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ── Custom Missions ──
+async function loadAndRenderCustomMissions(cls) {
+  const res  = await fetch(`${API}/custom-missions.php?class_id=${cls.id}`);
+  const list = await res.json();
+  const container = document.getElementById('cm-container');
+  if (!container) return;
+
+  const listHtml = list.length
+    ? list.map(m => `
+        <div class="cm-item">
+          <div>
+            <div class="cm-item-title">${m.title}</div>
+            <div class="cm-item-meta">${JSON.parse(m.data||'[]').length} Schritt(e) · ${m.xp} XP · ${m.active ? 'aktiv' : 'inaktiv'}</div>
+          </div>
+          <button class="btn sm danger" data-cm-id="${m.id}" title="Löschen">🗑</button>
+        </div>`).join('')
+    : '<div style="color:var(--text2);font-size:.85rem;font-style:italic">Noch keine eigenen Aufgaben.</div>';
+
+  container.innerHTML = `
+    <div class="cm-list" id="cm-list">${listHtml}</div>
+    <button class="btn sm ghost" id="btn-cm-toggle">+ Neue Aufgabe</button>
+    <div class="cm-form" id="cm-form">
+      <label>Titel</label>
+      <input id="cm-title" type="text" placeholder="z.B. Extrapunkt Spurpunkt" maxlength="100">
+      <label>Aufgabentext / Story</label>
+      <textarea id="cm-story" placeholder="Kontext der Aufgabe…"></textarea>
+      <div class="cm-step-box">
+        <div style="font-size:.8rem;font-weight:700;color:var(--rope)">Schritt 1</div>
+        <label>Aufgabenstellung</label>
+        <input id="cm-prompt" type="text" placeholder="Berechne den Betrag des Vektors OA⃗." maxlength="200">
+        <label>Typ</label>
+        <select id="cm-type">
+          <option value="number">Zahl (eine Antwort)</option>
+          <option value="vector3">Vektor (x₁|x₂|x₃)</option>
+        </select>
+        <label>Korrekte Antwort</label>
+        <div class="cm-step-row">
+          <input id="cm-ans-0" type="number" step="any" placeholder="Wert">
+          <input id="cm-ans-1" type="number" step="any" placeholder="x₂" style="display:none">
+          <input id="cm-ans-2" type="number" step="any" placeholder="x₃" style="display:none">
+        </div>
+        <label>Hinweis</label>
+        <input id="cm-hint" type="text" placeholder="Tipp für Schüler…" maxlength="200">
+      </div>
+      <div class="cm-step-row" style="margin-top:12px">
+        <label style="margin:0;line-height:2">XP</label>
+        <input id="cm-xp" type="number" value="60" min="10" max="200" style="width:80px">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn" id="btn-cm-save">Aufgabe speichern</button>
+        <button class="btn ghost" id="btn-cm-cancel">Abbrechen</button>
+      </div>
+    </div>`;
+
+  // Show/hide vector fields based on type
+  document.getElementById('cm-type')?.addEventListener('change', e => {
+    const isVec = e.target.value === 'vector3';
+    document.getElementById('cm-ans-0').placeholder = isVec ? 'x₁' : 'Wert';
+    document.getElementById('cm-ans-1').style.display = isVec ? '' : 'none';
+    document.getElementById('cm-ans-2').style.display = isVec ? '' : 'none';
+  });
+
+  document.getElementById('btn-cm-toggle')?.addEventListener('click', () => {
+    document.getElementById('cm-form').classList.toggle('open');
+  });
+  document.getElementById('btn-cm-cancel')?.addEventListener('click', () => {
+    document.getElementById('cm-form').classList.remove('open');
+  });
+
+  document.getElementById('btn-cm-save')?.addEventListener('click', async () => {
+    const title  = document.getElementById('cm-title').value.trim();
+    const story  = document.getElementById('cm-story').value.trim();
+    const prompt = document.getElementById('cm-prompt').value.trim();
+    const type   = document.getElementById('cm-type').value;
+    const xp     = parseInt(document.getElementById('cm-xp').value) || 60;
+    const hint   = document.getElementById('cm-hint').value.trim();
+    const a0 = parseFloat(document.getElementById('cm-ans-0').value);
+
+    if (!title || !prompt || isNaN(a0)) {
+      showToast('Bitte Titel, Aufgabenstellung und Antwort ausfüllen.', true); return;
+    }
+    const answer = type === 'vector3'
+      ? [a0, parseFloat(document.getElementById('cm-ans-1').value)||0, parseFloat(document.getElementById('cm-ans-2').value)||0]
+      : a0;
+
+    const body = { class_id: cls.id, title, story, xp,
+      steps: [{ type, prompt, answer, hint }] };
+
+    const res = await fetch(`${API}/custom-missions.php`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); return; }
+    showToast(`Aufgabe "${title}" gespeichert`);
+    loadAndRenderCustomMissions(cls);
+  });
+
+  // Delete buttons
+  container.querySelectorAll('[data-cm-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Aufgabe löschen?')) return;
+      await fetch(`${API}/custom-missions.php?id=${btn.dataset.cmId}&class_id=${cls.id}`,
+        { method: 'DELETE' });
+      showToast('Aufgabe gelöscht');
+      loadAndRenderCustomMissions(cls);
+    });
+  });
+}
+
+// ── Student Timeline ──
+const MISSION_NAMES = {
+  1:'Plattform A finden', 2:'Plattform B finden', 3:'Plattform G finden',
+  4:'Seil A→B', 5:'Seil B→G', 6:'Richtungsvektor', 7:'Geradengleichung',
+  8:'Punktprobe', 9:'Spurpunkt', 10:'Schnittgerade', 11:'Abstand', 12:'Winkel'
+};
+
+document.getElementById('btn-timeline-close').addEventListener('click', () =>
+  document.getElementById('timeline-modal').classList.remove('open'));
+
+async function openTimeline(code) {
+  document.getElementById('timeline-title').textContent = `Verlauf · ${code}`;
+  document.getElementById('timeline-subtitle').textContent = 'Lade…';
+  document.getElementById('timeline-content').innerHTML = '';
+  document.getElementById('timeline-modal').classList.add('open');
+
+  try {
+    const res  = await fetch(`${API}/student.php?code=${code}`);
+    const data = await res.json();
+    const log  = data.log || [];
+
+    document.getElementById('timeline-subtitle').textContent =
+      `${log.length} Mission${log.length !== 1 ? 'en' : ''} abgeschlossen`;
+
+    if (!log.length) {
+      document.getElementById('timeline-content').innerHTML =
+        '<div style="color:var(--text2);font-size:.85rem;font-style:italic;padding:12px 0">Noch keine Missionen abgeschlossen.</div>';
+      return;
+    }
+
+    document.getElementById('timeline-content').innerHTML = log.map(entry => {
+      const name = MISSION_NAMES[entry.mission_id] || `Mission ${entry.mission_id}`;
+      const mastery = entry.mastery || 'silver';
+      const star = mastery === 'gold' ? ' ⭐' : '';
+      const date = new Date(entry.completed_at).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<div class="timeline-item">
+        <div class="timeline-dot ${mastery}"></div>
+        <div>
+          <div class="timeline-mission">M${entry.mission_id}: ${name}${star}</div>
+          <div class="timeline-date">${date}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    document.getElementById('timeline-subtitle').textContent = 'Fehler beim Laden';
+  }
+}
+
+// ── Fehleranalyse Widget ──
+const CONCEPT_LABELS = {
+  'koordinaten':      'Koordinaten lesen',
+  'ortsvektor':       'Ortsvektor',
+  'verbindungsvektor':'Verbindungsvektor',
+  'betrag':           'Betrag / Länge',
+  'einheitsvektor':   'Einheitsvektor',
+  'geradengleichung': 'Geradengleichung',
+  'punktprobe':       'Punktprobe',
+  'spurpunkt':        'Spurpunkt',
+  'schnittgerade':    'Schnittgerade',
+  'abstand':          'Abstandsberechnung',
+  'skalarprodukt':    'Skalarprodukt',
+  'winkel':           'Winkel zwischen Vektoren',
+};
+
+function renderErrorWidget(students) {
+  // Aggregate error counts across all students
+  const totals = {};
+  students.forEach(s => {
+    const errs = JSON.parse(s.errors || '{}');
+    Object.entries(errs).forEach(([concept, count]) => {
+      totals[concept] = (totals[concept] || 0) + count;
+    });
+  });
+
+  const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = sorted[0]?.[1] || 1;
+
+  if (!sorted.length) {
+    return `<div class="error-widget">
+      <div class="error-widget-title">🔴 Häufige Fehler (Klasse)</div>
+      <div class="error-none">Noch keine Fehlerdaten synchronisiert.</div>
+    </div>`;
+  }
+
+  const bars = sorted.map(([concept, count]) => {
+    const label = CONCEPT_LABELS[concept] || concept;
+    const pct = Math.round((count / max) * 100);
+    return `<div class="error-bar-row">
+      <div class="error-bar-label" title="${label}">${label}</div>
+      <div class="error-bar-track"><div class="error-bar-fill" style="width:${pct}%"></div></div>
+      <div class="error-bar-count">${count}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="error-widget">
+    <div class="error-widget-title">🔴 Häufige Fehler (Klasse, gesamt)</div>
+    <div class="error-bars">${bars}</div>
+  </div>`;
+}
+
+// ── QR Codes ──
+document.getElementById('btn-qr-close').addEventListener('click', () =>
+  document.getElementById('qr-modal').classList.remove('open'));
+
+document.getElementById('btn-qr-download').addEventListener('click', () => {
+  const canvas = document.getElementById('qr-canvas');
+  const code   = document.getElementById('qr-code-text').textContent;
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = `qr-${code}.png`;
+  a.click();
+});
+
+function openQR(code) {
+  const url = APP_URL + '?code=' + code;
+  document.getElementById('qr-code-text').textContent = code;
+  const canvas = document.getElementById('qr-canvas');
+  canvas.width = 200; canvas.height = 200;
+  QRCode.toCanvas(canvas, url, { width: 200, margin: 1, color: { dark: '#000', light: '#fff' } });
+  document.getElementById('qr-modal').classList.add('open');
+}
+
+async function printAllQR(students) {
+  const sheet = document.getElementById('qr-print-sheet');
+  sheet.innerHTML = `<div class="qr-sheet-grid" id="qr-sheet-inner"></div>`;
+  const grid = sheet.querySelector('#qr-sheet-inner');
+
+  for (const s of students) {
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    const cv = document.createElement('canvas');
+    cv.width = 160; cv.height = 160;
+    const url = APP_URL + '?code=' + s.code;
+    await QRCode.toCanvas(cv, url, { width: 160, margin: 1 });
+    card.appendChild(cv);
+    card.innerHTML += `<div class="qr-card-code">${s.code}</div>
+      <div class="qr-card-hint">KletterMath · Vektorrechnung Q1</div>`;
+    grid.appendChild(card);
+  }
+  window.print();
 }
 
 // ── Utils ──
