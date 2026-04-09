@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 require 'config.php';
 header('Content-Type: text/plain');
 
@@ -26,10 +24,10 @@ CREATE TABLE IF NOT EXISTS km_codes (
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS km_progress (
   code          CHAR(6)   PRIMARY KEY,
-  missions_done TEXT      NOT NULL DEFAULT '[]',
+  missions_done TEXT,
   xp            INT       DEFAULT 0,
   streak        INT       DEFAULT 0,
-  mastery       TEXT      NOT NULL DEFAULT '{}',
+  mastery       TEXT,
   last_sync     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (code) REFERENCES km_codes(code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
