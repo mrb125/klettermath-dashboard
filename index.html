@@ -166,6 +166,40 @@ tr:hover td { background: rgba(255,255,255,.02) }
 .setup-panel.show { display: block }
 .setup-panel h3 { margin-bottom: 12px; color: var(--rope) }
 .setup-panel pre { background: var(--bg1); padding: 10px 14px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: .8rem; overflow-x: auto; margin: 8px 0 }
+
+/* ── Sidebar Navigation ── */
+.sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding: 12px 12px 0 }
+.sidebar-nav-btn { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: .88rem; font-weight: 600; border: none; background: none; color: var(--text2); width: 100%; text-align: left; transition: background .15s, color .15s; font-family: var(--font) }
+.sidebar-nav-btn:hover { background: var(--card); color: var(--text1) }
+.sidebar-nav-btn.active { background: rgba(232,160,48,.15); color: var(--rope) }
+
+/* ── Task Overview ── */
+.tasks-header { margin-bottom: 20px }
+.task-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px }
+.task-filter-btn { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border); background: var(--card); color: var(--text2); cursor: pointer; font-size: .8rem; font-family: var(--font); font-weight: 600; transition: all .15s }
+.task-filter-btn:hover { border-color: var(--rope); color: var(--text1) }
+.task-filter-btn.active { background: rgba(232,160,48,.2); border-color: var(--rope); color: var(--rope) }
+.task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px }
+.task-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; transition: border-color .15s }
+.task-card:hover { border-color: rgba(232,160,48,.4) }
+.task-card-header { display: flex; align-items: flex-start; gap: 10px }
+.task-flag { font-size: 1.4rem; line-height: 1; flex-shrink: 0; margin-top: 2px }
+.task-title { font-weight: 700; font-size: .92rem; line-height: 1.3; flex: 1 }
+.task-orig { font-size: .72rem; color: var(--text2); font-style: italic; margin-top: 2px }
+.task-tags { display: flex; gap: 6px; flex-wrap: wrap }
+.task-tag { font-size: .7rem; padding: 2px 8px; border-radius: 99px; font-weight: 700; white-space: nowrap }
+.tag-concept { background: rgba(100,149,237,.15); color: #6495ed; border: 1px solid rgba(100,149,237,.25) }
+.tag-diff-leicht { background: rgba(107,203,119,.15); color: var(--ok); border: 1px solid rgba(107,203,119,.25) }
+.tag-diff-mittel { background: rgba(232,160,48,.15); color: var(--rope); border: 1px solid rgba(232,160,48,.25) }
+.tag-diff-schwer { background: rgba(255,94,91,.15); color: var(--err); border: 1px solid rgba(255,94,91,.25) }
+.task-desc { font-size: .83rem; color: var(--text2); line-height: 1.5 }
+.task-adapt { font-size: .8rem; background: rgba(232,160,48,.06); border: 1px solid rgba(232,160,48,.15); border-radius: 6px; padding: 7px 10px; color: var(--text1); line-height: 1.4 }
+.task-adapt::before { content: '🧗 '; }
+.task-footer { display: flex; align-items: center; gap: 8px; margin-top: 2px }
+.task-source-link { font-size: .75rem; color: var(--rope); text-decoration: none; opacity: .8; transition: opacity .15s; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 }
+.task-source-link:hover { opacity: 1 }
+.task-diagram { border-radius: 8px; overflow: hidden; background: var(--bg4); display: flex; align-items: center; justify-content: center; padding: 8px }
+.task-count-badge { background: var(--bg4); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: .8rem; color: var(--text2); display: inline-block }
 </style>
 </head>
 <body>
@@ -181,7 +215,11 @@ tr:hover td { background: rgba(255,255,255,.02) }
 
   <!-- Sidebar -->
   <div class="sidebar">
-    <div class="sidebar-section">
+    <div class="sidebar-nav">
+      <button class="sidebar-nav-btn active" id="nav-classes">🏫 Klassen</button>
+      <button class="sidebar-nav-btn" id="nav-tasks">📚 Aufgaben-Bibliothek</button>
+    </div>
+    <div class="sidebar-section" id="sidebar-classes-section">
       <div class="sidebar-label">Klassen</div>
       <div id="class-list"></div>
       <div class="new-class-form">
@@ -772,6 +810,615 @@ async function printAllQR(students) {
     grid.appendChild(card);
   }
   window.print();
+}
+
+// ── Sidebar Navigation ──
+let currentView = 'classes';
+
+document.getElementById('nav-classes').addEventListener('click', () => {
+  currentView = 'classes';
+  document.getElementById('nav-classes').classList.add('active');
+  document.getElementById('nav-tasks').classList.remove('active');
+  document.getElementById('sidebar-classes-section').style.display = '';
+  if (activeClass) selectClass(activeClass);
+  else {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="empty-icon">🧗</div><div class="empty-text">Wähle links eine Klasse aus oder lege eine neue an.</div></div>`;
+  }
+});
+
+document.getElementById('nav-tasks').addEventListener('click', () => {
+  currentView = 'tasks';
+  document.getElementById('nav-tasks').classList.add('active');
+  document.getElementById('nav-classes').classList.remove('active');
+  document.getElementById('sidebar-classes-section').style.display = 'none';
+  renderTasksView('alle');
+});
+
+// ── Task Library Data ──
+const TASKS = [
+  // ── Deutschland ──
+  {
+    id: 't01', flag: '🇩🇪', country: 'Deutschland (NRW Abitur)',
+    title: 'Zipline-Neigung berechnen',
+    orig: 'Vektoren: Winkel einer Seilbahn',
+    concept: 'winkel', difficulty: 'mittel',
+    context: 'Kletterpark / Seilbahn',
+    desc: 'Gegeben: Startpunkt A(2|1|8) und Endpunkt B(14|5|2). Berechne den Neigungswinkel der Zipline gegenüber der Horizontalen (x₁x₂-Ebene).',
+    adapt: 'Direkt in KletterMath adaptierbar: Missionen 11–12. Zipline als Geradenmodell zwischen zwei Plattformen.',
+    source: 'https://www.schulentwicklung.nrw.de/lehrplaene/upload/klp_SII/m/KLP_GOSt_Mathematik.pdf',
+    sourceLabel: 'KLP NRW Mathematik',
+    svg: `<svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="15" x2="110" y2="65" stroke="#e8a030" stroke-width="2"/>
+      <line x1="10" y1="65" x2="110" y2="65" stroke="#6495ed" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <circle cx="10" cy="15" r="4" fill="#e8a030"/>
+      <circle cx="110" cy="65" r="4" fill="#6bcb77"/>
+      <path d="M60 65 A20 20 0 0 0 70 50" stroke="#ffd166" stroke-width="1.5" fill="none"/>
+      <text x="68" y="48" fill="#ffd166" font-size="9">α</text>
+      <text x="5" y="12" fill="#f0e6d3" font-size="8">A</text>
+      <text x="112" y="68" fill="#f0e6d3" font-size="8">B</text>
+    </svg>`
+  },
+  {
+    id: 't02', flag: '🇩🇪', country: 'Deutschland (Bayern Abitur)',
+    title: 'Dreieck-Fläche mit Kreuzprodukt',
+    orig: 'Berechnung des Flächeninhalts eines Dreiecks',
+    concept: 'kreuzprodukt', difficulty: 'schwer',
+    context: 'Segelschiff / Navigation',
+    desc: 'A(1|2|0), B(4|1|3), C(2|5|1). Berechne den Flächeninhalt des Dreiecks ABC mithilfe des Vektorprodukts.',
+    adapt: 'Plattform-Dreieck im Kletterpark: Welche Fläche spannt das Sicherheitsnetz auf?',
+    source: 'https://www.isb.bayern.de/schularten/gymnasiale-oberstufe/mathematik/',
+    sourceLabel: 'ISB Bayern Mathematik',
+    svg: null
+  },
+  {
+    id: 't03', flag: '🇩🇪', country: 'Deutschland (Baden-Württemberg)',
+    title: 'Geradenabstand — zwei windschiefe Geraden',
+    orig: 'Abstand windschiefer Geraden',
+    concept: 'abstand', difficulty: 'schwer',
+    context: 'Architektur / Stahlbau',
+    desc: 'g: x⃗ = (1|2|0) + t·(1|1|2), h: x⃗ = (3|0|1) + s·(1|2|1). Berechne den kürzesten Abstand der windschiefen Geraden.',
+    adapt: 'Abstand zweier Seilbahnen im Kletterpark — sicherheitsrelevante Mindestabstand-Berechnung.',
+    source: 'https://www.bildungsplaene-bw.de/Startseite',
+    sourceLabel: 'Bildungsplan BW',
+    svg: null
+  },
+
+  // ── Österreich ──
+  {
+    id: 't04', flag: '🇦🇹', country: 'Österreich (Matura)',
+    title: 'Schnittgerade zweier Ebenen',
+    orig: 'Schnittgerade von Ebenen (Matura 2022)',
+    concept: 'schnittgerade', difficulty: 'schwer',
+    context: 'Bergwandern / Topographie',
+    desc: 'E₁: 2x₁ + x₂ − x₃ = 4, E₂: x₁ − x₂ + 3x₃ = 2. Bestimme die Schnittgerade und prüfe, ob P(3|−1|3) auf ihr liegt.',
+    adapt: 'Schnittkante zweier Felswände. Kletterer müssen die Route entlang der Schnittkante planen.',
+    source: 'https://www.bifie.at/standardisierte-reife-und-diplomprüfung/',
+    sourceLabel: 'BIFIE Österreich',
+    svg: null
+  },
+
+  // ── Niederlande ──
+  {
+    id: 't05', flag: '🇳🇱', country: 'Niederlande (VWO Wiskunde B)',
+    title: 'Windrad-Blattspitze: Ortsvektor als Funktion',
+    orig: 'Windmolen: toppunt van een wiek',
+    concept: 'ortsvektor', difficulty: 'mittel',
+    context: 'Windenergie / Technik',
+    desc: 'Ein Windrad dreht sich. Nabenposition: (10|0|40)m. Blattlänge 25m, Drehung in der x₁x₃-Ebene. Gib den Ortsvektor der Blattspitze in Abhängigkeit vom Winkel φ an.',
+    adapt: 'Rotierendes Klettersystem: Positionsvektor eines Karabiners auf kreisrundem Schienensystem.',
+    source: 'https://www.wolterskluwer.nl/winkel/wiskunde-b',
+    sourceLabel: 'Wiskunde B VWO',
+    svg: null
+  },
+  {
+    id: 't06', flag: '🇳🇱', country: 'Niederlande (HAVO Wiskunde)',
+    title: 'Verbindungsvektor und Mittelpunkt',
+    orig: 'Verbindingsvector en middelpunt',
+    concept: 'verbindungsvektor', difficulty: 'leicht',
+    context: 'Stadtplanung / Wegweiser',
+    desc: 'Punkte A(2|5|1) und B(8|1|7). Bestimme den Verbindungsvektor AB⃗, seinen Betrag und den Mittelpunkt M von AB.',
+    adapt: 'Mittelpunkt zwischen zwei Kletterplattformen — Sicherheitsnetz-Aufhängepunkt.',
+    source: 'https://www.nuffic.nl/subjects/mathematics',
+    sourceLabel: 'HAVO/VWO Wiskunde',
+    svg: `<svg width="120" height="70" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="15" y1="55" x2="105" y2="15" stroke="#e8a030" stroke-width="2" marker-end="url(#arr)"/>
+      <circle cx="15" cy="55" r="4" fill="#6495ed"/>
+      <circle cx="105" cy="15" r="4" fill="#6bcb77"/>
+      <circle cx="60" cy="35" r="4" fill="#ffd166"/>
+      <text x="5" y="65" fill="#f0e6d3" font-size="9">A</text>
+      <text x="107" y="13" fill="#f0e6d3" font-size="9">B</text>
+      <text x="63" y="33" fill="#ffd166" font-size="9">M</text>
+      <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#e8a030"/></marker></defs>
+    </svg>`
+  },
+
+  // ── Schweiz ──
+  {
+    id: 't07', flag: '🇨🇭', country: 'Schweiz (Maturität)',
+    title: 'Drachen-Schnur als Gerade',
+    orig: 'Drachenschnur: Parameterdarstellung einer Geraden',
+    concept: 'geradengleichung', difficulty: 'mittel',
+    context: 'Outdoor / Sport',
+    desc: 'Ein Drachen steigt bei Punkt A(0|0|0) senkrecht aufwärts und driftet. Richtungsvektor v⃗=(1|2|3). Wo durchquert die Schnur die Ebene x₃=15?',
+    adapt: 'Seilpfad eines Kletterseils durch den Park. Wo trifft das Seil eine bestimmte Höhenebene?',
+    source: 'https://www.edk.ch/de/bildungssystem/bildungspolitische-themen/maturitaet',
+    sourceLabel: 'EDK Schweiz Maturität',
+    svg: null
+  },
+
+  // ── Frankreich ──
+  {
+    id: 't08', flag: '🇫🇷', country: 'Frankreich (Terminale Spécialité Maths)',
+    title: 'Repère dans l\'espace — Koordinatensystem',
+    orig: 'Repère orthonormé: coordonnées et distances',
+    concept: 'koordinaten', difficulty: 'leicht',
+    context: 'Architektur / Innenraum',
+    desc: 'In einem rechteckigen Raum (6m × 4m × 3m): A liegt in einer Ecke, B diagonal gegenüber oben. Berechne |AB⃗| und die Parameterdarstellung der Raumdiagonale.',
+    adapt: 'Kletterpark als rechteckiger Raum: Diagonale zwischen Eingang (S) und höchster Plattform (T).',
+    source: 'https://eduscol.education.fr/1723/programmes-et-ressources-en-mathematiques-voie-gt',
+    sourceLabel: 'Eduscol France',
+    svg: null
+  },
+  {
+    id: 't09', flag: '🇫🇷', country: 'Frankreich (Terminale)',
+    title: 'Produit scalaire — Winkel & Orthogonalität',
+    orig: 'Vecteurs orthogonaux: angle entre deux vecteurs',
+    concept: 'winkel', difficulty: 'mittel',
+    context: 'Physik / Kräfte',
+    desc: 'u⃗=(3|1|−2), v⃗=(1|−3|0). Berechne u⃗·v⃗, zeige dass u⃗ ⊥ v⃗. Bestimme alle Vektoren w⃗ mit |w⃗|=1 und w⃗ ⊥ u⃗ ⊥ v⃗.',
+    adapt: 'Senkrechte Sicherheitsleinen an Plattformen: zwei Seile müssen orthogonal zueinander verlaufen.',
+    source: 'https://eduscol.education.fr/1723/programmes-et-ressources-en-mathematiques-voie-gt',
+    sourceLabel: 'Eduscol France',
+    svg: null
+  },
+
+  // ── UK ──
+  {
+    id: 't10', flag: '🇬🇧', country: 'UK (A-Level Mathematics)',
+    title: 'Three-Rope Anchor: Gleichgewicht',
+    orig: 'Vectors in 3D: Three forces in equilibrium',
+    concept: 'winkel', difficulty: 'schwer',
+    context: 'Climbing / Klettern',
+    desc: 'Drei Kräfte F₁=(2|−1|3), F₂=(−1|4|−1), F₃=(a|b|c) halten ein Gewicht im Gleichgewicht. Bestimme F₃ und den Winkel zwischen F₁ und F₂.',
+    adapt: 'Direktes Kletterthema: Drei-Punkt-Anker an einer Kletterwand. Gleichgewichtsbedingung im 3D-Raum.',
+    source: 'https://www.ocr.org.uk/qualifications/as-and-a-level/mathematics-a-h240-from-2017/',
+    sourceLabel: 'OCR A-Level Maths',
+    svg: null
+  },
+  {
+    id: 't11', flag: '🇬🇧', country: 'UK (A-Level Further Maths)',
+    title: 'Ebenengleichung — Normalenvektor',
+    orig: 'The equation of a plane using a normal vector',
+    concept: 'schnittgerade', difficulty: 'schwer',
+    context: 'Ingenieurwesen',
+    desc: 'Ebene durch P(1|2|−1) mit Normalenvektor n⃗=(2|3|−1). Bestimme die Ebenengleichung und prüfe, ob Q(3|−1|2) in der Ebene liegt.',
+    adapt: 'Schräge Kletterwand als Ebene. Liegt eine bestimmte Griffposition in der Wandebene?',
+    source: 'https://www.edexcel.com/en-gb/subject/further-mathematics/',
+    sourceLabel: 'Edexcel Further Maths',
+    svg: null
+  },
+
+  // ── Singapur ──
+  {
+    id: 't12', flag: '🇸🇬', country: 'Singapur (H2 Mathematics, A-Level)',
+    title: 'Ratio-Division eines Vektors',
+    orig: 'Position vector: section formula and ratio',
+    concept: 'verbindungsvektor', difficulty: 'mittel',
+    context: 'Geometrie / Architektur',
+    desc: 'A=(1|3|2), B=(7|0|5). Punkt P teilt AB im Verhältnis 2:1 von A. Punkt Q teilt AB im Verhältnis 1:3 von B. Bestimme OP⃗ und OQ⃗.',
+    adapt: 'Kletterer hängt an Sicherheitsseil zwischen zwei Plattformen — Positionsvektor bei gegebenem Verhältnis.',
+    source: 'https://www.seab.gov.sg/home/examinations/gce-a-level/a-level-syllabuses-examined-for-2024',
+    sourceLabel: 'SEAB Singapore H2 Math',
+    svg: `<svg width="120" height="70" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="60" x2="110" y2="20" stroke="#6495ed" stroke-width="1.5"/>
+      <circle cx="10" cy="60" r="4" fill="#6495ed"/>
+      <circle cx="110" cy="20" r="4" fill="#6495ed"/>
+      <circle cx="50" cy="47" r="4" fill="#e8a030"/>
+      <circle cx="83" cy="30" r="3" fill="#ffd166"/>
+      <text x="3" y="68" fill="#f0e6d3" font-size="9">A</text>
+      <text x="112" y="19" fill="#f0e6d3" font-size="9">B</text>
+      <text x="52" y="45" fill="#e8a030" font-size="9">P</text>
+      <text x="85" y="29" fill="#ffd166" font-size="9">Q</text>
+    </svg>`
+  },
+  {
+    id: 't13', flag: '🇸🇬', country: 'Singapur (H2 Mathematics)',
+    title: 'Abstand Punkt–Gerade in 3D',
+    orig: 'Distance from a point to a line in 3D',
+    concept: 'abstand', difficulty: 'schwer',
+    context: 'Physik / Geometrie',
+    desc: 'Gerade l: x⃗=(1|0|2)+t(2|1|−1). Punkt P=(3|4|1). Bestimme den Lotfußpunkt F und den Abstand |PF|.',
+    adapt: 'Kürzester Abstand eines Kletterers von einer Seilbahn-Linie — wichtig für Kollisionsvermeidung.',
+    source: 'https://www.seab.gov.sg/home/examinations/gce-a-level/a-level-syllabuses-examined-for-2024',
+    sourceLabel: 'SEAB Singapore H2 Math',
+    svg: null
+  },
+
+  // ── Finnland ──
+  {
+    id: 't14', flag: '🇫🇮', country: 'Finnland (Pitkä matematiikka, Ylioppilastutkinto)',
+    title: 'Satellit — Bahnvektor und Position',
+    orig: 'Satelliitti: ratavektori ja sijainti',
+    concept: 'ortsvektor', difficulty: 'mittel',
+    context: 'Astronomie / Raumfahrt',
+    desc: 'Satellit startet bei A(0|0|400) km, Richtungsvektor v⃗=(7|3|−0.5) km/min. Nach wie vielen Minuten hat der Satellit Höhe 300 km? Bestimme dann seine Position.',
+    adapt: 'Kletterer an Seil: Start bei Höhe 8m, Abstieg mit Vektor. Nach welcher Zeit erreicht er Höhe 2m?',
+    source: 'https://www.ylioppilastutkinto.fi/en/assessment/exams/mathematics/',
+    sourceLabel: 'Ylioppilastutkintolautakunta',
+    svg: null
+  },
+
+  // ── Schweden ──
+  {
+    id: 't15', flag: '🇸🇪', country: 'Schweden (Matematik 3c, Gymnasieskolan)',
+    title: 'Riktningsvektor — parallele Geraden',
+    orig: 'Riktningsvektorer: parallella linjer i 3D',
+    concept: 'geradengleichung', difficulty: 'leicht',
+    context: 'Stadtplanung / Verkehr',
+    desc: 'g: x⃗=(1|2|0)+t(1|1|2). Sind die Geraden h: x⃗=(3|4|1)+s(2|2|4) und k: x⃗=(0|1|0)+r(1|2|1) parallel zu g? Begründe.',
+    adapt: 'Parallele Kletterrouten: Zwei Seilbahnen im Park — fahren sie in die gleiche Richtung?',
+    source: 'https://www.skolverket.se/undervisning/gymnasieskolan/laroplan-program-och-amnen-i-gymnasieskolan/gymnasieprogrammen/amne?url=1530314731%2Fsyllabuscw%2Fjsp%2Fsubject.htm%3FsubjectCode%3DMAT',
+    sourceLabel: 'Skolverket Sverige',
+    svg: null
+  },
+
+  // ── Japan ──
+  {
+    id: 't16', flag: '🇯🇵', country: 'Japan (数学B / Sūgaku B, Kōkō)',
+    title: 'Raumvektor: Tetraeder-Schwerpunkt',
+    orig: '空間ベクトル：四面体の重心',
+    concept: 'verbindungsvektor', difficulty: 'schwer',
+    context: 'Geometrie / Architektur',
+    desc: 'Tetraeder mit Ecken A(0|0|0), B(4|0|0), C(0|3|0), D(0|0|6). Bestimme den Schwerpunkt G und zeige: OG⃗ = ¼(OA⃗+OB⃗+OC⃗+OD⃗).',
+    adapt: 'Gleichgewichtspunkt eines 3D-Klettergerüsts: Schwerpunkt der vier Hauptanker.',
+    source: 'https://www.mext.go.jp/a_menu/shotou/cs/mext_00907.htm',
+    sourceLabel: 'MEXT Japan 学習指導要領',
+    svg: null
+  },
+
+  // ── Australien ──
+  {
+    id: 't17', flag: '🇦🇺', country: 'Australien (VCE Mathematical Methods / Specialist)',
+    title: 'Vektor-Projektion: Schatten eines Punktes',
+    orig: 'Vector projection: shadow of a point',
+    concept: 'skalarprodukt', difficulty: 'schwer',
+    context: 'Physik / Computergrafik',
+    desc: 'Projiziere Punkt P=(3|4|2) auf die Gerade durch O mit Richtungsvektor d⃗=(1|2|2). Bestimme den Projektionsvektor und den Abstand P–Gerade.',
+    adapt: 'Schatten einer Kletter-Plattform auf eine Wand. Wo trifft der "Schattenvektor" die Ebene?',
+    source: 'https://www.vcaa.vic.edu.au/curriculum/vce/vce-study-designs/specialist-mathematics/Pages/Index.aspx',
+    sourceLabel: 'VCAA Specialist Mathematics',
+    svg: null
+  },
+
+  // ── Kanada ──
+  {
+    id: 't18', flag: '🇨🇦', country: 'Kanada (Ontario MCV4U)',
+    title: 'Linie–Ebene-Schnitt: Orientierungslauf',
+    orig: 'Line–plane intersection: orienteering problem',
+    concept: 'schnittgerade', difficulty: 'mittel',
+    context: 'Orientierungslauf / Sport',
+    desc: 'Gerade g: x⃗=(1|0|2)+t(1|2|−1). Ebene E: 2x₁−x₂+3x₃=9. Finde den Schnittpunkt von g mit E.',
+    adapt: 'Kletterseil trifft Felsebene: Wo berührt das Seil (als Gerade) die Kletterwand (als Ebene)?',
+    source: 'https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf',
+    sourceLabel: 'Ontario Curriculum MCV4U',
+    svg: null
+  },
+
+  // ── USA ──
+  {
+    id: 't19', flag: '🇺🇸', country: 'USA (AP Calculus BC / Precalculus)',
+    title: 'Parameterform einer Raumkurve',
+    orig: 'Parametric equations of a space curve',
+    concept: 'geradengleichung', difficulty: 'mittel',
+    context: 'Sport / Frisbee',
+    desc: 'Ein geworfener Frisbee bewegt sich mit x₁(t)=3t, x₂(t)=2t, x₃(t)=−t²+5. Bestimme Startpunkt, Richtungsvektor zum Zeitpunkt t=1 und wann x₃=0 gilt.',
+    adapt: 'Fliegendes Kletterseil: parabolische Kurve eines geworfenen Seilbeutels. Wo landet er?',
+    source: 'https://apcentral.collegeboard.org/courses/ap-calculus-bc',
+    sourceLabel: 'College Board AP Calculus',
+    svg: null
+  },
+
+  // ── Ungarn ──
+  {
+    id: 't20', flag: '🇭🇺', country: 'Ungarn (Érettségi emelt szint)',
+    title: 'Tükrözés an einer Ebene',
+    orig: 'Pont tükrözése egy síkra (3D vektoros módszer)',
+    concept: 'abstand', difficulty: 'schwer',
+    context: 'Optik / Geometrie',
+    desc: 'Spiegele Punkt A(1|2|3) an der Ebene E: x₁+2x₂−2x₃=0. Berechne zuerst den Fußpunkt des Lots von A auf E, dann den Spiegelpunkt A\'.',
+    adapt: 'Spiegeleffekt in spiegelndem Bergsee: Wo befindet sich das Spiegelbild einer Kletterplattform?',
+    source: 'https://www.oktatas.hu/pub_bin/dload/kozoktatas/tankonyvek/emelt_matematika/emelt_matematika_erettsegi.pdf',
+    sourceLabel: 'Oktatási Hivatal Ungarn',
+    svg: null
+  },
+
+  // ── Polen ──
+  {
+    id: 't21', flag: '🇵🇱', country: 'Polen (Matura — poziom rozszerzony)',
+    title: 'Vektor-Betrag und Winkelhalbierende',
+    orig: 'Długość wektora i dwusieczna kąta',
+    concept: 'betrag', difficulty: 'mittel',
+    context: 'Trigonometrie / Geometrie',
+    desc: 'a⃗=(3|4|0), b⃗=(0|3|4). Berechne |a⃗|, |b⃗| und den Winkel zwischen a⃗ und b⃗. Bestimme die normierte Winkelhalbierenden-Richtung.',
+    adapt: 'Sicherheitswinkel im Kletterpark: Ein Schüler hält zwei Seile. Wie groß ist der Winkel dazwischen?',
+    source: 'https://cke.gov.pl/egzamin-maturalny/egzamin-w-nowej-formule/podstawa-programowa/',
+    sourceLabel: 'CKE Polen Matura',
+    svg: null
+  },
+
+  // ── Tschechien ──
+  {
+    id: 't22', flag: '🇨🇿', country: 'Tschechien (Maturitní zkouška)',
+    title: 'Spurpunkte einer Geraden',
+    orig: 'Stopy přímky v souřadnicových rovinách',
+    concept: 'spurpunkt', difficulty: 'mittel',
+    context: 'Raumgeometrie',
+    desc: 'Gerade g: x⃗=(2|−1|3)+t(1|2|−2). Bestimme alle drei Spurpunkte (Schnittpunkte mit den Koordinatenebenen x₁=0, x₂=0, x₃=0).',
+    adapt: 'Direkt als Mission 9 (Spurpunkt) adaptierbar! Seil trifft Boden/Wand/Deckenfläche.',
+    source: 'https://www.cermat.cz/maturitni-zkouska-prirucka-pro-zadatele-2020-1404035310.html',
+    sourceLabel: 'CERMAT Tschechien',
+    svg: `<svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="5" y="45" width="110" height="1.5" fill="#6495ed" opacity="0.5"/>
+      <rect x="5" y="5" width="1.5" height="70" fill="#6495ed" opacity="0.5"/>
+      <line x1="5" y1="70" x2="115" y2="10" stroke="#e8a030" stroke-width="2"/>
+      <circle cx="26" cy="63" r="4" fill="#ffd166"/>
+      <circle cx="5" cy="70" r="4" fill="#6bcb77"/>
+      <circle cx="69" cy="45" r="4" fill="#ff6b35"/>
+      <text x="20" y="75" fill="#ffd166" font-size="8">S₁</text>
+      <text x="8" y="68" fill="#6bcb77" font-size="8">S₂</text>
+      <text x="71" y="43" fill="#ff6b35" font-size="8">S₃</text>
+    </svg>`
+  },
+
+  // ── Italien ──
+  {
+    id: 't23', flag: '🇮🇹', country: 'Italien (Esame di Stato — Liceo Scientifico)',
+    title: 'Vettori nel piano e nello spazio',
+    orig: 'Vettori: operazioni e applicazioni geometriche',
+    concept: 'verbindungsvektor', difficulty: 'leicht',
+    context: 'Geometrie / Design',
+    desc: 'a⃗=(2|1|3), b⃗=(−1|4|0). Berechne a⃗+b⃗, 2a⃗−b⃗, a⃗·b⃗ (Skalarprodukt) und den Winkel zwischen a⃗ und b⃗.',
+    adapt: 'Kombinierte Seilvektoren: zwei Kletterseile bilden einen Resultierenden-Vektor.',
+    source: 'https://www.istruzione.it/esame_di_stato/index.html',
+    sourceLabel: 'MiUR Italia',
+    svg: null
+  },
+
+  // ── Spanien ──
+  {
+    id: 't24', flag: '🇪🇸', country: 'Spanien (Bachillerato — EBAU/EVAU)',
+    title: 'Recta y plano: posiciones relativas',
+    orig: 'Posiciones relativas de recta y plano en R³',
+    concept: 'schnittgerade', difficulty: 'mittel',
+    context: 'Raumgeometrie',
+    desc: 'Untersuche die gegenseitige Lage: Gerade g: (x−1)/2 = (y+1)/1 = (z−2)/(−1) und Ebene E: 2x−y+z=3. Schnitt, parallel oder Gerade in Ebene?',
+    adapt: 'Kletterseil als Gerade, Felswand als Ebene: Trifft das Seil die Wand? Wenn ja, wo?',
+    source: 'https://www.educacion.es/educacion/bachillerato.html',
+    sourceLabel: 'Ministerio de Educación España',
+    svg: null
+  },
+
+  // ── Brasilien ──
+  {
+    id: 't25', flag: '🇧🇷', country: 'Brasilien (ENEM / OBMEP)',
+    title: 'Vetor deslocamento: trilha ecológica',
+    orig: 'Vetor deslocamento em trilha na floresta',
+    concept: 'verbindungsvektor', difficulty: 'leicht',
+    context: 'Natur / Ökotourismus',
+    desc: 'Wanderer startet bei A(0|0|0), geht nach B(3|4|0) km, dann nach C(3|4|5) km. Berechne die Gesamtstrecke und den Gesamtverschiebungsvektor AC⃗.',
+    adapt: 'Kletterpfad: mehrere Wegpunkte im Kletterpark. Gesamtweg und direkter Vektor zum Ziel.',
+    source: 'https://enem.inep.gov.br/',
+    sourceLabel: 'INEP Brasil ENEM',
+    svg: null
+  },
+
+  // ── Mexiko ──
+  {
+    id: 't26', flag: '🇲🇽', country: 'Mexiko (SEP — Bachillerato, Matemáticas V)',
+    title: 'Vectores en 3D: cable de tirolesa',
+    orig: 'Cálculo de ángulo y longitud de una tirolesa',
+    concept: 'betrag', difficulty: 'leicht',
+    context: 'Kletterpark / Tirolesa (Zipline)',
+    desc: 'Tirolesa von A(0|0|10) nach B(20|5|2) m. Berechne Länge des Seils, Neigungswinkel und den Einheitsvektor der Richtung.',
+    adapt: 'Direktes Zipline-Thema — identisch mit KletterMath-Missionen! Sofort als Aufgabe nutzbar.',
+    source: 'https://www.sep.gob.mx/es/sep1/Planes_y_Programas_Educacion_Basica',
+    sourceLabel: 'SEP México',
+    svg: null
+  },
+
+  // ── Türkei ──
+  {
+    id: 't27', flag: '🇹🇷', country: 'Türkei (YKS — TYT/AYT Matematik)',
+    title: 'Uzay vektörleri: köşegenler ve açılar',
+    orig: 'Uzayda vektörler: kübün köşegenlerinin açısı',
+    concept: 'winkel', difficulty: 'mittel',
+    context: 'Geometrie / Würfel',
+    desc: 'Würfel mit Seitenlänge 3. Hauptdiagonale d⃗ und Flächendiagonale f⃗. Berechne den Winkel zwischen d⃗ und f⃗ mit dem Skalarprodukt.',
+    adapt: 'Kletterturm als Würfelgerüst: Winkel zwischen Stangen. Wie stark ist die Diagonalverstrebung?',
+    source: 'https://www.meb.gov.tr/ygs-lys-kpss-turkiye-geneli-sinav/',
+    sourceLabel: 'MEB Türkiye YKS',
+    svg: null
+  },
+
+  // ── Südkorea ──
+  {
+    id: 't28', flag: '🇰🇷', country: 'Südkorea (수능 / CSAT — 수학)',
+    title: '정사영 (Orthogonale Projektion)',
+    orig: '평면 위로의 벡터 정사영 (벡터의 정사영)',
+    concept: 'skalarprodukt', difficulty: 'schwer',
+    context: 'Physik / Geometrie',
+    desc: 'Vektor a⃗=(1|2|2) auf Vektor b⃗=(3|0|4) projizieren. Bestimme Projektionsvektor proj_b(a⃗) und Betrag der Projektion.',
+    adapt: 'Schattenlänge eines Kletterseils auf dem Boden. Wie lang ist der Schatten bei parallelen Sonnenstrahlen?',
+    source: 'https://www.suneung.re.kr/',
+    sourceLabel: 'KICE 한국교육과정평가원',
+    svg: null
+  },
+
+  // ── Indien ──
+  {
+    id: 't29', flag: '🇮🇳', country: 'Indien (CBSE Class 12 — Three Dimensional Geometry)',
+    title: 'Direction cosines and ratios',
+    orig: 'Direction cosines of a line in 3D space',
+    concept: 'betrag', difficulty: 'leicht',
+    context: 'Navigation / Geometrie',
+    desc: 'Gerade durch A(1|2|−2) und B(3|−1|4). Bestimme den Richtungsvektor, die Richtungskosinusse (l,m,n) und zeige: l²+m²+n²=1.',
+    adapt: 'Kletterpfad-Richtung als Einheitsvektor: Die "Richtungskosinusse" zeigen, wie stark x₁/x₂/x₃-Anteile.',
+    source: 'https://www.cbseacademic.nic.in/web_material/CurriculumMain24/SrSecondary/Mathematics_Sr_Sec_2024-25.pdf',
+    sourceLabel: 'CBSE India Class 12',
+    svg: null
+  },
+
+  // ── Israel ──
+  {
+    id: 't30', flag: '🇮🇱', country: 'Israel (Bagrut — מתמטיקה 5 יחידות)',
+    title: 'גאומטריה אנליטית: חיתוך של שני מישורים',
+    orig: 'Schnittgerade zweier Ebenen (analytisch)',
+    concept: 'schnittgerade', difficulty: 'schwer',
+    context: 'Analytische Geometrie',
+    desc: 'E₁: x+2y−z=4, E₂: 2x−y+3z=1. Bestimme die Schnittgerade in Parameterform. Überprüfe mit einem Geradenpunkt.',
+    adapt: 'Schnittkante zweier Kletterwände — wo trifft die eine Wand die andere?',
+    source: 'https://www.education.gov.il/bagrut',
+    sourceLabel: 'Bagrut Israel',
+    svg: null
+  },
+
+  // ── Neuseeland ──
+  {
+    id: 't31', flag: '🇳🇿', country: 'Neuseeland (NCEA Level 3 — AS91573)',
+    title: 'Vector equations of lines: kayak path',
+    orig: 'Geometric interpretation of a parametric line',
+    concept: 'geradengleichung', difficulty: 'mittel',
+    context: 'Natur / Kayaking',
+    desc: 'Kayak startet bei A(3|1|0) mit Geschwindigkeit v⃗=(2|3|0). Wann erreicht er x₁=9? Wie nah kommt er an Fels P=(6|7|0)?',
+    adapt: 'Kletterer bewegt sich auf einem Seil. Wann erreicht er eine bestimmte Position? Wie nah an Hindernis?',
+    source: 'https://www.nzqa.govt.nz/ncea/assessment/view-detailed.do?standardNumber=AS91573',
+    sourceLabel: 'NZQA AS91573',
+    svg: null
+  },
+
+  // ── Portugal ──
+  {
+    id: 't32', flag: '🇵🇹', country: 'Portugal (ENEB — Matemática A)',
+    title: 'Produto escalar e ângulo entre vetores',
+    orig: 'Vetores no espaço: produto escalar',
+    concept: 'skalarprodukt', difficulty: 'mittel',
+    context: 'Physik / Geometrie',
+    desc: 'u⃗=(2|1|2), v⃗=(1|−2|2). Berechne u⃗·v⃗, |u⃗|, |v⃗| und den Winkel zwischen u⃗ und v⃗. Sind die Vektoren senkrecht?',
+    adapt: 'Zwei Kletterseile am gleichen Karabiner — wie groß ist der Winkel zwischen den Seilen?',
+    source: 'https://www.iave.pt/provas-e-exames/exames-nacionais/',
+    sourceLabel: 'IAVE Portugal',
+    svg: null
+  },
+
+  // ── Belgien ──
+  {
+    id: 't33', flag: '🇧🇪', country: 'Belgien (Secundair Onderwijs — Wiskunde)',
+    title: 'Richtingsvector en parametervergelijking',
+    orig: 'Rechten in de ruimte: parametrische vergelijking',
+    concept: 'geradengleichung', difficulty: 'leicht',
+    context: 'Raumgeometrie',
+    desc: 'Zwei Punkte A(2|3|1) und B(5|−1|4). Bestimme den Richtungsvektor, die Parameterdarstellung der Geraden und prüfe, ob C(8|−5|7) auf der Geraden liegt.',
+    adapt: 'Seilbahn zwischen zwei Plattformen. Liegt eine dritte Plattform C auf dem Seil?',
+    source: 'https://www.ond.vlaanderen.be/curriculum/',
+    sourceLabel: 'Onderwijs Vlaanderen',
+    svg: null
+  },
+  // ── Griechenland ──
+  {
+    id: 't34', flag: '🇬🇷', country: 'Griechenland (Πανελλαδικές — Μαθηματικά Κατεύθυνσης)',
+    title: 'Διάνυσμα: θέση και μήκος',
+    orig: 'Διανύσματα στον χώρο: βάσεις και συντεταγμένες',
+    concept: 'koordinaten', difficulty: 'leicht',
+    context: 'Geometrie',
+    desc: 'Dreieck mit A(2|1|0), B(0|3|4), C(4|−1|2). Bestimme alle Seitenvektoren, ihre Beträge, und den Schwerpunkt G des Dreiecks.',
+    adapt: 'Drei Kletterplattformen bilden ein Dreieck. Wo liegt der Gleichgewichtspunkt G (Schwerpunkt)?',
+    source: 'https://www.minedu.gov.gr/publications-sp-47027427/panelladikes-eksetaseis',
+    sourceLabel: 'ΥΠΑΙΘ Griechenland',
+    svg: null
+  },
+];
+
+// ── Task Overview Rendering ──
+let activeTaskFilter = 'alle';
+
+function renderTasksView(filter) {
+  activeTaskFilter = filter || 'alle';
+
+  const concepts = [
+    { key: 'alle', label: 'Alle' },
+    { key: 'koordinaten', label: '📍 Koordinaten' },
+    { key: 'ortsvektor', label: '🎯 Ortsvektor' },
+    { key: 'verbindungsvektor', label: '↗ Verbindungsvektor' },
+    { key: 'betrag', label: '📏 Betrag' },
+    { key: 'geradengleichung', label: '📐 Gerade' },
+    { key: 'spurpunkt', label: '✕ Spurpunkt' },
+    { key: 'schnittgerade', label: '⚡ Schnitt' },
+    { key: 'abstand', label: '↔ Abstand' },
+    { key: 'skalarprodukt', label: '· Skalarprodukt' },
+    { key: 'winkel', label: '∠ Winkel' },
+    { key: 'kreuzprodukt', label: '✕ Kreuzprodukt' },
+  ];
+
+  const filtered = activeTaskFilter === 'alle' ? TASKS : TASKS.filter(t => t.concept === activeTaskFilter);
+
+  const filtersHtml = concepts.map(c =>
+    `<button class="task-filter-btn ${activeTaskFilter === c.key ? 'active' : ''}" data-filter="${c.key}">${c.label}</button>`
+  ).join('');
+
+  const taskCardsHtml = filtered.map(t => renderTaskCard(t)).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="tasks-header">
+      <div class="page-header" style="margin-bottom:12px">
+        <div>
+          <div class="page-title">📚 Aufgaben-Bibliothek</div>
+          <div class="page-subtitle">Internationale Vektorrechnung-Aufgaben für Q1 GK NRW · ${TASKS.length} Aufgaben aus ${new Set(TASKS.map(t=>t.flag)).size} Ländern</div>
+        </div>
+      </div>
+    </div>
+    <div class="task-filters">${filtersHtml}</div>
+    <div style="margin-bottom:12px">
+      <span class="task-count-badge">${filtered.length} Aufgaben angezeigt</span>
+    </div>
+    <div class="task-grid">${taskCardsHtml}</div>
+  `;
+
+  document.querySelectorAll('.task-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => renderTasksView(btn.dataset.filter));
+  });
+}
+
+function renderTaskCard(t) {
+  const diffClass = `tag-diff-${t.difficulty}`;
+  const diffLabel = t.difficulty === 'leicht' ? '● Leicht' : t.difficulty === 'mittel' ? '●● Mittel' : '●●● Schwer';
+  const conceptLabels = {
+    koordinaten:'Koordinaten', ortsvektor:'Ortsvektor', verbindungsvektor:'Verbindungsvektor',
+    betrag:'Betrag', geradengleichung:'Geradengleichung', spurpunkt:'Spurpunkt',
+    schnittgerade:'Schnittgerade', abstand:'Abstand', skalarprodukt:'Skalarprodukt',
+    winkel:'Winkel', kreuzprodukt:'Kreuzprodukt'
+  };
+  const conceptLabel = conceptLabels[t.concept] || t.concept;
+
+  return `<div class="task-card">
+    <div class="task-card-header">
+      <div class="task-flag">${t.flag}</div>
+      <div>
+        <div class="task-title">${t.title}</div>
+        <div class="task-orig">${t.country}</div>
+      </div>
+    </div>
+    ${t.svg ? `<div class="task-diagram">${t.svg}</div>` : ''}
+    <div class="task-tags">
+      <span class="task-tag tag-concept">${conceptLabel}</span>
+      <span class="task-tag ${diffClass}">${diffLabel}</span>
+      <span class="task-tag" style="background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text2)">${t.context}</span>
+    </div>
+    <div class="task-desc">${t.desc}</div>
+    <div class="task-adapt">${t.adapt}</div>
+    <div class="task-footer">
+      <a class="task-source-link" href="${t.source}" target="_blank" rel="noopener">🔗 ${t.sourceLabel}</a>
+    </div>
+  </div>`;
 }
 
 // ── Utils ──
